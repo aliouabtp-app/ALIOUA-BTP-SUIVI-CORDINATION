@@ -57,6 +57,7 @@ class AliouaApp extends StatefulWidget {
 }
 class _AliouaAppState extends State<AliouaApp> {
   String? token;
+  bool loading = true;
   @override void initState() { super.initState(); _loadToken(); }
   Future<void> _loadToken() async {
     final p = await SharedPreferences.getInstance();
@@ -68,6 +69,7 @@ class _AliouaAppState extends State<AliouaApp> {
     setState(() => token = value);
   }
   @override Widget build(BuildContext context) => MaterialApp(
+    builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox.shrink()),
     debugShowCheckedModeBanner: false, title: 'ALIOUA BTP',
     theme: ThemeData(useMaterial3: true, scaffoldBackgroundColor: cream,
       colorScheme: ColorScheme.fromSeed(seedColor: teal, primary: teal),
