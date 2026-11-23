@@ -9,9 +9,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 String apiBase = const String.fromEnvironment('API_BASE', defaultValue: 'http://127.0.0.1:8000/api');
+// تخزين JWT مشفر عبر Android Keystore بدلاً من SharedPreferences النصي.
+const secureStorage = FlutterSecureStorage();
 const navy = Color(0xFF102C43), teal = Color(0xFF1677B8), cream = Color(0xFFF4F7F8);
 
 Future<Database> openLocalDb() async {
@@ -63,11 +66,13 @@ class _AliouaAppState extends State<AliouaApp> {
     final p = await SharedPreferences.getInstance();
     apiBase = p.getString('api_base') ?? apiBase;
     if (!mounted) return;
-    setState(() { token = p.getString('access'); loading = false; });
+    final savedToken = await secureStorage.read(key: 'access');
+    if (!mounted) return;
+    setState(() { token = savedToken; loading = false; });
   }
-  void _loggedIn(String value) async {
-    final p = await SharedPreferences.getInstance(); await p.setString('access', value);
-    setState(() => token = value);
+  Future<void> _loggedIn(String value) async {
+    await secureStorage.write(key: 'access', value: value);
+    if (mounted) setState(() => token = value);
   }
   @override Widget build(BuildContext context) => MaterialApp(
     builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox.shrink()),
@@ -103,7 +108,7 @@ class _AliouaAppState extends State<AliouaApp> {
       floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: teal, foregroundColor: Colors.white),
     ),
     home: loading ? const Scaffold(body: Center(child: CircularProgressIndicator(color: teal))) : token == null ? LoginPage(onLogin: _loggedIn) : IssuesPage(token: token!, onLogout: () async {
-      final p = await SharedPreferences.getInstance(); await p.remove('access'); if (mounted) setState(() => token = null);
+      await secureStorage.delete(key: 'access'); if (mounted) setState(() => token = null);
     }));
 }
 
