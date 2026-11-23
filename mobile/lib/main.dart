@@ -62,7 +62,8 @@ class _AliouaAppState extends State<AliouaApp> {
   Future<void> _loadToken() async {
     final p = await SharedPreferences.getInstance();
     apiBase = p.getString('api_base') ?? apiBase;
-    if (!mounted) return;\n    setState(() { token = p.getString('access'); loading = false; });
+    if (!mounted) return;
+    setState(() { token = p.getString('access'); loading = false; });
   }
   void _loggedIn(String value) async {
     final p = await SharedPreferences.getInstance(); await p.setString('access', value);
