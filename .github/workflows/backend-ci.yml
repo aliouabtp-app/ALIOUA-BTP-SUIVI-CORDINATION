@@ -21,13 +21,13 @@ jobs:
       - name: Generate initial migration for CI
         working-directory: backend
         env:
-          DJANGO_SECRET_KEY: "ci-only-not-a-production-secret-0123456789-abcdef"
+          DJANGO_SECRET_KEY: "ci-only-not-a-production-secret-0123456789-abcdef-xyz"
           DJANGO_DEBUG: "1"
         run: python manage.py makemigrations core
       - name: Apply migrations and check project
         working-directory: backend
         env:
-          DJANGO_SECRET_KEY: "ci-only-not-a-production-secret-0123456789-abcdef"
+          DJANGO_SECRET_KEY: "ci-only-not-a-production-secret-0123456789-abcdef-xyz"
           DJANGO_DEBUG: "1"
         run: |
           python manage.py migrate --noinput
@@ -35,6 +35,6 @@ jobs:
       - name: Run tests
         working-directory: backend
         env:
-          DJANGO_SECRET_KEY: "ci-only-not-a-production-secret-0123456789-abcdef"
+          DJANGO_SECRET_KEY: "ci-only-not-a-production-secret-0123456789-abcdef-xyz"
           DJANGO_DEBUG: "1"
         run: python manage.py test
