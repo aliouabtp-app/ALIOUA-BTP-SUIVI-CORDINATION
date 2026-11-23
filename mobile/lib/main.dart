@@ -209,33 +209,6 @@ class _NewIssuePageState extends State<NewIssuePage> {
     const SizedBox(height:8),const Text('تُحفظ الملاحظة على الجهاز أولاً. تحتاج المزامنة إلى معرّف مساحة صالح واتصال بالخادم.',style:TextStyle(color:Colors.blueGrey,fontSize:12))
   ]));
 }
-), '');
-      if (!apiBase.startsWith('http://') && !apiBase.startsWith('https://')) throw Exception('أدخل عنوان API كاملاً يبدأ بـ http أو https');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('api_base', apiBase);
-      final r = await http.post(Uri.parse('$apiBase/auth/token/'),
-        headers: {'Content-Type':'application/json'},
-        body: jsonEncode({'email':email.text.trim(),'password':password.text}));
-      if (r.statusCode != 200) throw Exception('بيانات الدخول غير صحيحة أو الخادم غير متاح');
-      widget.onLogin(jsonDecode(r.body)['access'] as String);
-    } catch (e) { setState(() => error = e.toString().replaceFirst('Exception: ','')); }
-    finally { if(mounted) setState(() => busy = false); }
-  }
-  @override Widget build(BuildContext context) => Scaffold(body: Center(child: SingleChildScrollView(
-    padding: const EdgeInsets.all(24), child: Card(elevation: 2, child: Padding(padding: const EdgeInsets.all(24),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.apartment_rounded, size: 48, color: teal),
-        const SizedBox(height: 12), const Text('ALIOUA BTP', style: TextStyle(fontSize: 23,fontWeight: FontWeight.bold,color: navy)),
-        const Text('متابعة وتنسيق الورش', style: TextStyle(color: Colors.blueGrey)),
-        const SizedBox(height: 24),
-        TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText:'البريد الإلكتروني',border:OutlineInputBorder())),
-        const SizedBox(height: 12),
-        TextField(controller: password, obscureText:true, decoration: const InputDecoration(labelText:'كلمة المرور',border:OutlineInputBorder())),
-        if(error.isNotEmpty) Padding(padding: const EdgeInsets.only(top:12),child:Text(error,style:const TextStyle(color:Colors.red))),
-        const SizedBox(height: 18), SizedBox(width:double.infinity,child:FilledButton(onPressed:busy?null:submit,child:Text(busy?'جارٍ الدخول…':'تسجيل الدخول'))),
-      ]))))));
-}
-
 class QrScanPage extends StatelessWidget {
   const QrScanPage({super.key});
   @override Widget build(BuildContext context)=>Scaffold(
