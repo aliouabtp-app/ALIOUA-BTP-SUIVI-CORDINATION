@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/db.sqlite3:/app/db.sqlite3
+      - ./backend/data:/app/data
       - ./backend/media:/app/media
   web:
     build: ./web
