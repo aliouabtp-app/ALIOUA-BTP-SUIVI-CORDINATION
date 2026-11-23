@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -156,7 +158,15 @@ class NewIssuePage extends StatefulWidget {
 class _NewIssuePageState extends State<NewIssuePage> {
   final title=TextEditingController(),description=TextEditingController(),space=TextEditingController();
   String priority='MEDIUM'; XFile? photo; bool saving=false;
-  Future<void> pickPhoto() async { final x=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:75,maxWidth:1600); if(x!=null)setState(()=>photo=x); }
+  Future<void> pickPhoto() async {
+    final x=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:75,maxWidth:1600);
+    if(x!=null){
+      // نقل الصورة من مجلد cache المؤقت إلى مجلد التطبيق الدائم قبل حفظ سجل الملاحظة.
+      final dir=await getApplicationDocumentsDirectory();
+      final saved=await File(x.path).copy(p.join(dir.path,'issue_${DateTime.now().millisecondsSinceEpoch}.jpg'));
+      if(mounted)setState(()=>photo=XFile(saved.path));
+    }
+  }
   Future<void> save() async {
     if(title.text.trim().isEmpty||space.text.trim().isEmpty)return;
     setState(()=>saving=true);
