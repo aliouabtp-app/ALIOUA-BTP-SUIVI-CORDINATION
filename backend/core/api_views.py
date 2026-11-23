@@ -82,10 +82,25 @@ class PhotoViewSet(AuditedViewSet):
     write_roles={"ADMIN","MANAGER","ENGINEER","INSPECTOR"}; creator_field="uploaded_by"
     filterset_fields=["issue","task","space"]
     def perform_create(self,s):
-        f=s.validated_data["image"]
+        from io import BytesIO
+        from PIL import Image, ImageOps
+        from django.core.files.base import ContentFile
+        original=s.validated_data["image"]
+        # ضغط الصورة وتصحيح اتجاهها قبل تخزينها لتقليل استهلاك مساحة الخادم.
+        img=ImageOps.exif_transpose(Image.open(original))
+        img.thumbnail((2000,2000))
+        fmt=img.format or "JPEG"
+        if fmt not in {"JPEG","PNG","WEBP"}: fmt="JPEG"
+        if fmt=="JPEG" and img.mode not in {"RGB","L"}: img=img.convert("RGB")
+        buffer=BytesIO()
+        if fmt=="JPEG": img.save(buffer,format=fmt,quality=82,optimize=True)
+        elif fmt=="WEBP": img.save(buffer,format=fmt,quality=82,method=6)
+        else: img.save(buffer,format=fmt,optimize=True)
+        ext={"JPEG":"jpg","PNG":"png","WEBP":"webp"}[fmt]
+        compressed=ContentFile(buffer.getvalue(),name=original.name.rsplit(".",1)[0]+"."+ext)
         with transaction.atomic():
-            o=s.save(uploaded_by=self.request.user,original_filename=f.name,file_size=f.size)
-            models.AuditLog.objects.create(user=self.request.user,action="CREATE",entity="Photo",entity_id=str(o.pk),payload={"filename":f.name,"size":f.size})
+            o=s.save(uploaded_by=self.request.user,image=compressed,original_filename=original.name,file_size=compressed.size)
+            models.AuditLog.objects.create(user=self.request.user,action="CREATE",entity="Photo",entity_id=str(o.pk),payload={"filename":original.name,"original_size":original.size,"stored_size":compressed.size})
 class ProgressViewSet(AuditedViewSet):
     queryset=models.Progress.objects.select_related("space","updated_by"); serializer_class=ProgressSerializer
     write_roles={"ADMIN","MANAGER","ENGINEER"}; creator_field="updated_by"; http_method_names=["get","post","head","options"]
