@@ -120,7 +120,7 @@ jobs:
 
           wrapper = Path("android/gradle/wrapper/gradle-wrapper.properties")
           # كتابة ملف Gradle Wrapper بسطر صحيح واحد
-          wrapper.write_text("distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-all.zip\\n")
+          wrapper.write_text("distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-all.zip\n")
           print("Android Gradle Plugin 8.6.1, Kotlin 2.1.0, compileSdk 36, Gradle 8.7")
           PY
       - name: Build release APK
