@@ -1,6 +1,6 @@
 import {useEffect,useState} from "react";
 import axios from "axios";
-const API=(import.meta.env.VITE_API_URL||"http://127.0.0.1:8000/api").replace(/\/$/,"");
+const API=(import.meta.env.VITE_API_URL||"/api").replace(/\/$/,"");
 export default function Workspace({section,token,projects,issues,tasks,onRefresh,user}){
  const api=axios.create({baseURL:API,headers:{Authorization:"Bearer "+token}});
  const [rows,setRows]=useState([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[search,setSearch]=useState("");
