@@ -12,8 +12,10 @@ class Command(BaseCommand):
             ("admin@alioua.local","مدير النظام","ADMIN"),
             ("manager@alioua.local","مسير الشركة","MANAGER"),
             ("engineer@alioua.local","مهندس الموقع","ENGINEER")]:
-            u,_=User.objects.get_or_create(email=email,defaults={"full_name":name,"role":role,"is_staff":role=="ADMIN","is_superuser":role=="ADMIN"})
-            if not u.has_usable_password(): u.set_password("ChangeMe123!"); u.save()
+            u,created=User.objects.get_or_create(email=email,defaults={"full_name":name,"role":role,"is_staff":role=="ADMIN","is_superuser":role=="ADMIN"})
+            if created:
+                u.set_password("ChangeMe123!")
+                u.save(update_fields=["password"])
             users[role]=u
         p,_=Project.objects.get_or_create(name="مشروع تجريبي - ALIOUA BTP",defaults={"client":"عميل تجريبي","start_date":date.today(),"status":"ACTIVE"})
         b,_=Building.objects.get_or_create(project=p,name="المبنى الرئيسي")
