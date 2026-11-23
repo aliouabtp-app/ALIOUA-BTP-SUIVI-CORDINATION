@@ -93,8 +93,8 @@ jobs:
                   changed = True
           if not changed:
               raise SystemExit("Kotlin Android plugin declaration was not found")
-          settings.write_text("\\n".join(lines) + "\\n")
-          print("\\n".join(line for line in lines if "kotlin.android" in line))
+          settings.write_text("\n".join(lines) + "\n")
+          print("\n".join(line for line in lines if "kotlin.android" in line))
           PY
       - name: Build release APK
         run: flutter build apk --release --dart-define=API_BASE=http://127.0.0.1:8000/api
