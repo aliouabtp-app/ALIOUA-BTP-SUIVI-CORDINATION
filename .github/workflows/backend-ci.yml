@@ -76,7 +76,7 @@ jobs:
       - name: Generate Android project files
         run: flutter create --platforms=android .
       - name: Build release APK
-        run: flutter build apk --release --dart-define=API_BASE=http://10.0.2.2:8000/api
+        run: flutter build apk --release --dart-define=API_BASE=http://127.0.0.1:8000/api
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
