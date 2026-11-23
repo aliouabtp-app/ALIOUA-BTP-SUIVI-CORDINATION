@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 String apiBase = const String.fromEnvironment('API_BASE', defaultValue: 'http://127.0.0.1:8000/api');
-const navy = Color(0xFF102C43), teal = Color(0xFF129D92), cream = Color(0xFFF4F7F8);
+const navy = Color(0xFF102C43), teal = Color(0xFF1677B8), cream = Color(0xFFF4F7F8);
 
 Future<Database> openLocalDb() async {
   final root = await getDatabasesPath();
