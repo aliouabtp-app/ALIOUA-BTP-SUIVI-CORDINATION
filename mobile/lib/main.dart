@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -162,6 +163,10 @@ class NewIssuePage extends StatefulWidget {
 class _NewIssuePageState extends State<NewIssuePage> {
   final title=TextEditingController(),description=TextEditingController(),space=TextEditingController();
   String priority='MEDIUM'; XFile? photo; bool saving=false;
+  Future<void> scanSpace() async {
+    final id=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>const QrScanPage()));
+    if(id!=null && mounted) setState(()=>space.text=id);
+  }
   Future<void> pickPhoto() async {
     final x=await ImagePicker().pickImage(source:ImageSource.camera,imageQuality:75,maxWidth:1600);
     if(x!=null){
@@ -183,7 +188,7 @@ class _NewIssuePageState extends State<NewIssuePage> {
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('تسجيل ملاحظة')),body:ListView(padding:const EdgeInsets.all(18),children:[
     TextField(controller:title,decoration:const InputDecoration(labelText:'عنوان الملاحظة',border:OutlineInputBorder())),
     const SizedBox(height:12),TextField(controller:description,maxLines:3,decoration:const InputDecoration(labelText:'الوصف',border:OutlineInputBorder())),
-    const SizedBox(height:12),TextField(controller:space,decoration:const InputDecoration(labelText:'معرّف المساحة (UUID)',border:OutlineInputBorder())),
+    const SizedBox(height:12),Row(children:[Expanded(child:TextField(controller:space,decoration:const InputDecoration(labelText:'المساحة / UUID',border:OutlineInputBorder()))),IconButton(tooltip:'مسح QR',onPressed:scanSpace,icon:const Icon(Icons.qr_code_scanner,color:teal,size:30))]),
     const SizedBox(height:12),DropdownButtonFormField(value:priority,decoration:const InputDecoration(labelText:'الأولوية',border:OutlineInputBorder()),items:const [DropdownMenuItem(value:'LOW',child:Text('منخفضة')),DropdownMenuItem(value:'MEDIUM',child:Text('متوسطة')),DropdownMenuItem(value:'HIGH',child:Text('مرتفعة')),DropdownMenuItem(value:'CRITICAL',child:Text('حرجة'))],onChanged:(v)=>setState(()=>priority=v??'MEDIUM')),
     const SizedBox(height:12),OutlinedButton.icon(onPressed:pickPhoto,icon:const Icon(Icons.camera_alt_outlined),label:Text(photo==null?'التقاط صورة':'تم إرفاق صورة')),
     if(photo!=null) Padding(padding:const EdgeInsets.only(top:8),child:Text(p.basename(photo!.path),textAlign:TextAlign.center)),
@@ -318,4 +323,22 @@ class _NewIssuePageState extends State<NewIssuePage> {
     const SizedBox(height:20),FilledButton(onPressed:saving?null:save,child:Text(saving?'جارٍ الحفظ…':'حفظ دون اتصال')),
     const SizedBox(height:8),const Text('تُحفظ الملاحظة على الجهاز أولاً. تحتاج المزامنة إلى معرّف مساحة صالح واتصال بالخادم.',style:TextStyle(color:Colors.blueGrey,fontSize:12))
   ]));
+}
+
+class QrScanPage extends StatelessWidget {
+  const QrScanPage({super.key});
+  @override Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('مسح رمز المساحة')),
+    body:MobileScanner(onDetect:(capture){
+      for(final barcode in capture.barcodes){
+        final raw=barcode.rawValue;
+        if(raw==null) continue;
+        final parts=raw.split(':');
+        if(parts.length>=4 && parts[0]=='ALIOUA-BTP' && parts[1]=='SPACE'){
+          Navigator.of(context).pop(parts[2]);
+          break;
+        }
+      }
+    }),
+  );
 }
