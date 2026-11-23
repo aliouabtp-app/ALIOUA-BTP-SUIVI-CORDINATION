@@ -105,6 +105,10 @@ class Issue(SoftDelete, UUIDModel):
     class Priority(models.TextChoices): LOW="LOW","منخفضة"; MEDIUM="MEDIUM","متوسطة"; HIGH="HIGH","مرتفعة"; CRITICAL="CRITICAL","حرجة"
     class Status(models.TextChoices): OPEN="OPEN","مفتوحة"; IN_PROGRESS="IN_PROGRESS","قيد المعالجة"; CLOSED="CLOSED","مغلقة"
     space=models.ForeignKey(Space,on_delete=models.PROTECT,related_name="issues")
+    drawing=models.ForeignKey(Drawing,on_delete=models.SET_NULL,null=True,blank=True,related_name="issues")
+    # إحداثيات النقطة نسبية من 0 إلى 1 لتظل صحيحة مع تغيير حجم المخطط.
+    plan_x=models.DecimalField(max_digits=6,decimal_places=5,null=True,blank=True,validators=[MinValueValidator(0),MaxValueValidator(1)])
+    plan_y=models.DecimalField(max_digits=6,decimal_places=5,null=True,blank=True,validators=[MinValueValidator(0),MaxValueValidator(1)])
     title=models.CharField(max_length=220); description=models.TextField(blank=True)
     priority=models.CharField(max_length=12,choices=Priority.choices,default=Priority.MEDIUM,db_index=True)
     status=models.CharField(max_length=20,choices=Status.choices,default=Status.OPEN,db_index=True)
