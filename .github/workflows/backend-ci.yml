@@ -120,8 +120,11 @@ jobs:
 
           wrapper = Path("android/gradle/wrapper/gradle-wrapper.properties")
           content = wrapper.read_text()
-          content = re.sub(r'gradle-[0-9.]+-(all|bin)\\.zip',
-                           'gradle-8.7-all.zip', content)
+          content = "\\n".join(
+              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-all.zip"
+              if line.startswith("distributionUrl=") else line
+              for line in content.splitlines()
+          ) + "\\n"
           wrapper.write_text(content)
           print("Android Gradle Plugin 8.6.1, Kotlin 2.1.0, compileSdk 36, Gradle 8.7")
           PY
