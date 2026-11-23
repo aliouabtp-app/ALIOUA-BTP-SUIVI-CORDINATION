@@ -47,15 +47,38 @@ class IssueExcelExportView(APIView):
 class IssuePdfExportView(APIView):
     permission_classes=[IsAuthenticated]
     def get(self,request):
+        from pathlib import Path
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from arabic_reshaper import reshape
+        from bidi.algorithm import get_display
         out=BytesIO(); pdf=canvas.Canvas(out,pagesize=A4); width,height=A4
+        # خط DejaVu المجاني يدعم الحروف العربية؛ يُثبت في Dockerfile.
+        candidates=[
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+            Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"),
+        ]
+        font=next((p for p in candidates if p.exists()),None)
+        if font:
+            if "DejaVuArabic" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("DejaVuArabic",str(font)))
+            arabic_font="DejaVuArabic"
+        else:
+            arabic_font="Helvetica"
+        def rtl(value): return get_display(reshape(str(value)))
         pdf.setTitle("ALIOUA BTP Issues Report")
         y=height-48
         pdf.setFont("Helvetica-Bold",16); pdf.drawString(42,y,"ALIOUA BTP - SITE ISSUES REPORT"); y-=28
-        pdf.setFont("Helvetica",9); pdf.drawString(42,y,"Generated report | Issue title, priority, status, due date"); y-=24
+        pdf.setFont("Helvetica",9); pdf.drawString(42,y,"Issue register | Priority | Status | Due date"); y-=24
         for issue in Issue.objects.select_related("space").order_by("-created_at")[:45]:
-            line=f"{issue.created_at:%Y-%m-%d} | {issue.priority} | {issue.status} | {issue.title[:55]}"
-            pdf.drawString(42,y,line); y-=15
-            if y<45: pdf.showPage(); y=height-45; pdf.setFont("Helvetica",9)
+            pdf.setFont("Helvetica",8)
+            meta=f"{issue.created_at:%Y-%m-%d} | {issue.priority} | {issue.status} | {issue.due_date or '-'}"
+            pdf.drawString(42,y,meta)
+            pdf.setFont(arabic_font,9)
+            pdf.drawRightString(width-42,y,rtl(issue.title[:65]))
+            y-=17
+            if y<45:
+                pdf.showPage(); y=height-45
         pdf.save(); out.seek(0)
         response=HttpResponse(out.getvalue(),content_type="application/pdf")
         response["Content-Disposition"]='attachment; filename="alioua-btp-issues.pdf"'
