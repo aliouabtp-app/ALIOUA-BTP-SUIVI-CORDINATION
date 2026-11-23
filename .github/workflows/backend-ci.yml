@@ -110,7 +110,7 @@ jobs:
                   lines[i] = re.sub(r'version "[0-9.]+"', 'version "8.6.1"', line)
               if "org.jetbrains.kotlin.android" in line:
                   lines[i] = re.sub(r'version "[0-9.]+"', 'version "2.1.0"', line)
-          settings.write_text("\\n".join(lines) + "\\n")
+          settings.write_text("\n".join(lines) + "\n")
 
           app = Path("android/app/build.gradle")
           content = app.read_text()
