@@ -62,7 +62,7 @@ class DrawingViewSet(AuditedViewSet):
             o=s.save(uploaded_by=self.request.user,original_filename=f.name,file_size=f.size)
             models.AuditLog.objects.create(user=self.request.user,action="CREATE",entity="Drawing",entity_id=str(o.pk),payload={"filename":f.name})
 class IssueViewSet(AuditedViewSet):
-    queryset=models.Issue.objects.select_related("space","assignee","created_by"); serializer_class=IssueSerializer
+    queryset=models.Issue.objects.select_related("space","assignee","created_by","drawing"); serializer_class=IssueSerializer
     write_roles={"ADMIN","MANAGER","ENGINEER","INSPECTOR"}; creator_field="created_by"
     search_fields=["title","description","space__name"]; filterset_fields=["status","priority","assignee","space"]; ordering_fields=["created_at","due_date","priority"]
     def perform_update(self,s):
