@@ -43,6 +43,19 @@ class DrawingSerializer(serializers.ModelSerializer):
         return f
 class IssueSerializer(serializers.ModelSerializer):
     class Meta: model=Issue; fields="__all__"; read_only_fields=["id","created_by","closed_at","created_at","updated_at","is_deleted","deleted_at","archived_at"]
+    def validate(self,attrs):
+        current=self.instance
+        space=attrs.get("space",getattr(current,"space",None))
+        drawing=attrs.get("drawing",getattr(current,"drawing",None))
+        x=attrs.get("plan_x",getattr(current,"plan_x",None))
+        y=attrs.get("plan_y",getattr(current,"plan_y",None))
+        if drawing and space and drawing.level_id!=space.level_id:
+            raise serializers.ValidationError({"drawing":"يجب أن يكون المخطط تابعاً لطابق المساحة نفسها."})
+        if (x is None)!=(y is None):
+            raise serializers.ValidationError("يجب تحديد إحداثيي X وY معاً.")
+        if (x is not None or y is not None) and drawing is None:
+            raise serializers.ValidationError("اختر مخططاً قبل تحديد موقع الدبوس.")
+        return attrs
 class TaskSerializer(serializers.ModelSerializer):
     class Meta: model=Task; fields="__all__"; read_only_fields=["id","created_by","created_at","updated_at","is_deleted","deleted_at","archived_at"]
 class PhotoSerializer(serializers.ModelSerializer):
