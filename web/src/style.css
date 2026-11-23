@@ -14,3 +14,38 @@
 .drawing-row{flex-wrap:wrap}.drawing-row>div:first-child{flex:1}.plan-preview{position:relative;width:100%;max-width:900px;margin-top:10px;border:1px solid #e6edef;border-radius:10px;overflow:hidden;background:#f8fafb}.plan-preview img{display:block;width:100%;height:auto}.plan-pin{position:absolute;transform:translate(-50%,-50%) rotate(-45deg);width:25px;height:25px;border-radius:50% 50% 50% 0;background:#b83238;color:white;border:2px solid white;box-shadow:0 2px 8px #102c4340;display:grid;place-items:center;font-size:0}.plan-pin::after{content:'!';font-size:12px;transform:rotate(45deg)}.plan-pdf{width:100%;height:520px;border:1px solid #e6edef;border-radius:10px;margin-top:10px}
 
 .pin-picker-wrap{margin:10px 0 16px}.pin-picker-wrap>small{display:block;color:#748c95;font-size:10px;margin-bottom:7px}.pin-picker{position:relative;width:100%;max-width:680px;border:1px dashed #9dbdc7;border-radius:10px;overflow:hidden;cursor:crosshair;background:#f6f9fa}.pin-picker img{display:block;width:100%;height:auto}.pin-picker .plan-pin{pointer-events:none}
+
+/* واجهة ALIOUA BTP المطورة: تباين واضح وحركة خفيفة وهوية الشعار */
+:root{--navy:#102b43;--blue:#147db6;--red:#a9272e;--gold:#e3b33e;--mint:#159b83}
+body{background:#eef3f7;background-image:radial-gradient(ellipse at 85% 0%,#dcebf4 0,transparent 34%),radial-gradient(ellipse at 0% 100%,#f8ead7 0,transparent 28%)}
+.sidebar{background:linear-gradient(165deg,#0b2438 0%,#123e5a 62%,#174b65 100%);box-shadow:8px 0 30px #0d2d4212}
+.brand-mark{background:linear-gradient(145deg,#1689c6 0%,#07558d 65%,#a9272e 100%);box-shadow:0 9px 22px #0d5f9238}
+.topbar{background:#102b43;color:#fff;border:0;box-shadow:0 5px 18px #0b2b4218}
+.topbar .crumb,.topbar .slash{color:#9db6c6}.topbar b{color:#fff}.icon-btn{background:#1d4058;color:#e7f1f7;border-color:#31536a}
+.content{animation:contentIn .45s ease both}
+@keyframes contentIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+.welcome{background:linear-gradient(110deg,#fff 0%,#f4f9fc 70%,#fff7e8 100%);border:1px solid #e0eaf0;border-radius:20px;padding:24px 26px;box-shadow:0 12px 28px #16384c0a;position:relative;overflow:hidden}
+.welcome:after{content:"";position:absolute;left:-28px;top:-52px;width:180px;height:180px;border:22px solid #e3b33e18;border-radius:50%}
+.welcome h1{font-size:27px}.welcome .eyebrow{color:#a9272e}
+.primary{background:linear-gradient(120deg,#147db6,#0d5d91);box-shadow:0 7px 18px #147db632;transition:transform .2s,box-shadow .2s}.primary:hover{transform:translateY(-2px);box-shadow:0 10px 22px #147db645}
+.stats-grid{gap:17px}.stat-card{position:relative;overflow:hidden;border:1px solid #e1eaf0;border-radius:18px;box-shadow:0 8px 22px #143b520b;transition:transform .22s,box-shadow .22s}
+.stat-card:hover{transform:translateY(-4px);box-shadow:0 14px 28px #143b5218}
+.stat-card:after{content:"";position:absolute;bottom:0;right:0;left:0;height:4px;background:linear-gradient(90deg,#147db6,#e3b33e,#a9272e)}
+.stat-card:nth-child(2):after{background:linear-gradient(90deg,#a9272e,#e66c61)}.stat-card:nth-child(3):after{background:linear-gradient(90deg,#159b83,#72cbb5)}.stat-card:nth-child(4):after{background:linear-gradient(90deg,#147db6,#77b9df)}
+.stat-card strong{font-size:30px;color:#102b43}.panel{border-radius:18px;border-color:#e0e9ef;box-shadow:0 8px 24px #16384c0a}
+.panel-head h3{color:#173c55}.project-card{border-radius:15px;box-shadow:0 5px 16px #15384b08;transition:transform .2s}.project-card:hover{transform:translateY(-3px)}
+.project-symbol{background:#e4f2fa;color:#126d9f}.project-status{background:#fff4d7;color:#8b6719}
+.ring{background:conic-gradient(#147db6 calc(var(--value)*1%),#e6edf1 0);box-shadow:0 8px 24px #147db61a}
+.issue-row{transition:background .18s;padding-inline:8px;border-radius:9px}.issue-row:hover{background:#f4f8fb}
+.visual-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:17px}
+.chart-panel{min-height:280px}.chart-badge{font-size:9px;letter-spacing:1px;color:#147db6;background:#eaf5fb;border-radius:20px;padding:5px 9px;font-weight:700}.chart-badge.gold{color:#94701b;background:#fff5dc}
+.chart-area{height:205px;width:100%;position:relative}.pie-wrap{display:flex;align-items:center;gap:12px}.pie-area{height:190px;max-width:190px;flex:1}.pie-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}.pie-center b{font-size:25px;color:#153a52}.pie-center small{font-size:10px;color:#8396a1}
+.pie-legend{display:grid;gap:13px;flex:1}.pie-legend span{display:flex;align-items:center;gap:7px;font-size:10px;color:#607987}.pie-legend i{width:9px;height:9px;border-radius:3px}.pie-legend b{margin-right:auto;color:#163b52}
+.workspace{background:transparent;border:0;padding:0;min-height:420px}.entry-form{background:linear-gradient(125deg,#fff,#f4f9fc);border:1px solid #dfeaf0;border-radius:17px;box-shadow:0 8px 22px #16384c08}.data-list{background:#fff;border-color:#e1eaf0;border-radius:16px;box-shadow:0 7px 20px #16384c08}.data-row{transition:background .16s}.data-row:hover{background:#f6fafc}
+.nav-item.active{background:linear-gradient(90deg,#1a526f,#1c6684);box-shadow:inset -3px 0 #e3b33e,0 5px 14px #061d2e35}.nav-item:hover{background:#1b4b65}
+.login-wrap{background:radial-gradient(circle at 15% 20%,#d9edf7,transparent 32%),radial-gradient(circle at 85% 80%,#f8e8ca,transparent 30%),linear-gradient(135deg,#0f2d45 0%,#164d68 100%)}
+.login-card{box-shadow:0 24px 70px #071e2f55;border-radius:24px}
+.floor-track i{background:linear-gradient(90deg,#147db6,#159b83,#e3b33e)}
+@media(max-width:850px){.visual-grid{grid-template-columns:1fr}.pie-wrap{justify-content:center}}
+@media(max-width:720px){.welcome{padding:18px 16px;border-radius:16px}.welcome h1{font-size:21px}.visual-grid{grid-template-columns:1fr}.chart-panel{min-height:260px}.pie-wrap{gap:4px}.pie-area{max-width:170px}.pie-legend{gap:10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
