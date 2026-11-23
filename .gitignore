@@ -49,3 +49,6 @@ Thumbs.db
 *.backup
 *.zip
 *.log
+
+# Local database directory
+backend/data/
