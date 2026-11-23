@@ -146,7 +146,51 @@ class _IssuesPageState extends State<IssuesPage> {
     });
   }
   @override void dispose(){ connectionSub?.cancel(); super.dispose(); }
-  Future<void> _refresh() async { final db=await dbFuture; final data=await db.query('issues',orderBy:'local_id DESC'); if(mounted)setState(()=>rows=data); }
+  Future<void> _refresh() async {
+    final db=await dbFuture;
+    // اعرض البيانات المحلية فوراً حتى لا ينتظر المستخدم الشبكة.
+    final local=await db.query('issues',orderBy:'local_id DESC');
+    if(mounted) setState(()=>rows=local);
+    // ثم اجلب ملاحظات الخادم وأضفها محلياً دون المساس بالمسودات غير المزامنة.
+    try {
+      final response=await http.get(
+        Uri.parse('$apiBase/issues/'),
+        headers:{'Authorization':'Bearer ${widget.token}'},
+      ).timeout(const Duration(seconds:12));
+      if(response.statusCode!=200) return;
+      final decoded=jsonDecode(response.body);
+      final List<dynamic> remote=decoded is List ? decoded : (decoded['results'] as List? ?? []);
+      for(final raw in remote) {
+        if(raw is! Map<String,dynamic>) continue;
+        final id=raw['id']?.toString();
+        final spaceId=raw['space']?.toString();
+        if(id==null || spaceId==null) continue;
+        final existing=await db.query('issues',where:'server_id=?',whereArgs:[id],limit:1);
+        final values={
+          'server_id':id,
+          'title':raw['title']?.toString() ?? 'ملاحظة بدون عنوان',
+          'description':raw['description']?.toString() ?? '',
+          'space_id':spaceId,
+          'priority':raw['priority']?.toString() ?? 'MEDIUM',
+          'due_date':raw['due_date']?.toString(),
+          'sync_status':'synced',
+          'created_at':raw['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        };
+        if(existing.isEmpty) {
+          await db.insert('issues',values);
+        } else {
+          // لا نحدّث أي سجل محلي ما زال ينتظر رفعه.
+          if(existing.first['sync_status']=='synced') {
+            await db.update('issues',values,where:'server_id=?',whereArgs:[id]);
+          }
+        }
+      }
+      final refreshed=await db.query('issues',orderBy:'local_id DESC');
+      if(mounted) setState(()=>rows=refreshed);
+    } catch (_) {
+      // عند انقطاع الشبكة نكتفي بالقائمة المحلية ولا نعرض خطأ يزعج المستخدم.
+    }
+  }
   Future<void> _sync() async {
     if(syncing || !mounted) return;
     setState(()=>syncing=true);
