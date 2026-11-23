@@ -72,9 +72,36 @@ class _AliouaAppState extends State<AliouaApp> {
   @override Widget build(BuildContext context) => MaterialApp(
     builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox.shrink()),
     debugShowCheckedModeBanner: false, title: 'ALIOUA BTP',
-    theme: ThemeData(useMaterial3: true, scaffoldBackgroundColor: cream,
-      colorScheme: ColorScheme.fromSeed(seedColor: teal, primary: teal),
-      fontFamily: 'Roboto'),
+    theme: ThemeData(
+      useMaterial3: true,
+      scaffoldBackgroundColor: cream,
+      colorScheme: ColorScheme.fromSeed(seedColor: teal, primary: teal, surface: Colors.white),
+      fontFamily: 'Roboto',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: navy, foregroundColor: Colors.white, elevation: 0,
+        centerTitle: false, titleTextStyle: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white, elevation: 1, shadowColor: navy.withValues(alpha: .08),
+        margin: const EdgeInsets.only(bottom: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true, fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFDCE5EA))),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFDCE5EA))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: teal, width: 1.6)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: teal, foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(50),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: teal, foregroundColor: Colors.white),
+    ),
     home: loading ? const Scaffold(body: Center(child: CircularProgressIndicator(color: teal))) : token == null ? LoginPage(onLogin: _loggedIn) : IssuesPage(token: token!, onLogout: () async {
       final p = await SharedPreferences.getInstance(); await p.remove('access'); if (mounted) setState(() => token = null);
     }));
