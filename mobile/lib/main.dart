@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -92,25 +93,47 @@ class IssuesPage extends StatefulWidget {
 }
 class _IssuesPageState extends State<IssuesPage> {
   late Future<Database> dbFuture; List<Map<String,Object?>> rows=[]; bool syncing=false;
-  @override void initState(){super.initState();dbFuture=openLocalDb();_refresh();}
+  StreamSubscription<List<ConnectivityResult>>? connectionSub;
+  @override void initState(){
+    super.initState(); dbFuture=openLocalDb(); _refresh();
+    // محاولة المزامنة تلقائياً عند عودة الاتصال؛ وتبقى البيانات محلية إذا تعذر الخادم.
+    connectionSub=Connectivity().onConnectivityChanged.listen((states){
+      if(states.any((s)=>s!=ConnectivityResult.none) && mounted) _sync();
+    });
+  }
+  @override void dispose(){ connectionSub?.cancel(); super.dispose(); }
   Future<void> _refresh() async { final db=await dbFuture; final data=await db.query('issues',orderBy:'local_id DESC'); if(mounted)setState(()=>rows=data); }
   Future<void> _sync() async {
+    if(syncing || !mounted) return;
     setState(()=>syncing=true);
     try {
-      final db=await dbFuture; final pending=await db.query('issues',where:"sync_status='pending'");
+      final db=await dbFuture;
+      final pending=await db.query('issues',where:"sync_status IN ('pending','photo_pending')");
       for(final item in pending){
-        final body={'title':item['title'],'description':item['description'],'space':item['space_id'],'priority':item['priority'],'due_date':item['due_date']};
-        final response=await http.post(Uri.parse('$apiBase/issues/'),headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},body:jsonEncode(body));
-        if(response.statusCode==201){
-          final data=jsonDecode(response.body);
-          await db.update('issues',{'server_id':data['id'],'sync_status':'synced'},where:'local_id=?',whereArgs:[item['local_id']]);
-          // الصورة تبقى محفوظة محلياً حتى يكتمل مسار رفع الصور في إصدار API القادم.
+        String serverId=(item['server_id'] as String?)??'';
+        if(serverId.isEmpty){
+          final body={'title':item['title'],'description':item['description'],'space':item['space_id'],'priority':item['priority'],'due_date':item['due_date']};
+          final response=await http.post(Uri.parse('$apiBase/issues/'),headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},body:jsonEncode(body));
+          if(response.statusCode!=201) continue;
+          final data=jsonDecode(response.body); serverId=data['id'] as String;
+          await db.update('issues',{'server_id':serverId,'sync_status':item['image_path']==null?'synced':'photo_pending'},where:'local_id=?',whereArgs:[item['local_id']]);
+        }
+        final imagePath=item['image_path'] as String?;
+        if(imagePath!=null && imagePath.isNotEmpty){
+          final req=http.MultipartRequest('POST',Uri.parse('$apiBase/photos/'));
+          req.headers['Authorization']='Bearer ${widget.token}';
+          req.fields['issue']=serverId;
+          req.files.add(await http.MultipartFile.fromPath('image',imagePath));
+          final streamed=await req.send();
+          if(streamed.statusCode==201){
+            await db.update('issues',{'sync_status':'synced'},where:'local_id=?',whereArgs:[item['local_id']]);
+          }
         }
       }
       await _refresh();
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('اكتملت محاولة المزامنة')));
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('انتهت المزامنة؛ تم الاحتفاظ بأي سجل لم يكتمل رفعه.')));
     } catch (_) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا يوجد اتصال بالخادم؛ تم الاحتفاظ بالبيانات محلياً')));
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر الاتصال بالخادم؛ البيانات محفوظة محلياً وستتم إعادة المحاولة.')));
     } finally { if(mounted)setState(()=>syncing=false); }
   }
   Future<void> _newIssue() async {
