@@ -81,8 +81,8 @@ class _AliouaAppState extends State<AliouaApp> {
         backgroundColor: navy, foregroundColor: Colors.white, elevation: 0,
         centerTitle: false, titleTextStyle: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
       ),
-      cardTheme: CardThemeData(
-        color: Colors.white, elevation: 1, shadowColor: navy.withValues(alpha: .08),
+      cardTheme: CardTheme(
+        color: Colors.white, elevation: 1, shadowColor: navy.withOpacity(.08),
         margin: const EdgeInsets.only(bottom: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       inputDecorationTheme: InputDecorationTheme(
