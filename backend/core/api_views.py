@@ -1,6 +1,7 @@
 from django.db import connection, transaction
 from django.utils import timezone
 from rest_framework import viewsets
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -34,7 +35,8 @@ class AuditedViewSet(viewsets.ModelViewSet):
             obj=serializer.save()
             models.AuditLog.objects.create(user=self.request.user,action="UPDATE",entity=self.entity or obj.__class__.__name__,entity_id=str(obj.pk),payload={"fields":list(serializer.validated_data)})
     def perform_destroy(self,obj):
-        if not hasattr(obj,"is_deleted"): return Response({"detail":"الحذف غير متاح لهذا السجل."},status=405)
+        if not hasattr(obj,"is_deleted"):
+            raise MethodNotAllowed("DELETE",detail="الحذف غير متاح لهذا السجل.")
         with transaction.atomic():
             obj.is_deleted=True; obj.deleted_at=timezone.now(); obj.save(update_fields=["is_deleted","deleted_at","updated_at"])
             models.AuditLog.objects.create(user=self.request.user,action="SOFT_DELETE",entity=self.entity or obj.__class__.__name__,entity_id=str(obj.pk),payload={})
