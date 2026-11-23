@@ -3,7 +3,7 @@ import axios from "axios";
 import Workspace from "./Workspace.jsx";
 import {Activity,AlertCircle,ArrowUpLeft,Building2,CheckCircle2,ClipboardList,FileText,Home,Layers,LogOut,Plus,RefreshCw,Search,Settings,Users} from "lucide-react";
 
-const API=(import.meta.env.VITE_API_URL||"http://127.0.0.1:8000/api").replace(/\/$/,"");
+const API=(import.meta.env.VITE_API_URL||"/api").replace(/\/$/,"");
 const api=axios.create({baseURL:API});
 const nav=[["الرئيسية",Home],["الملاحظات",AlertCircle],["المهام",ClipboardList],["المشروع",Building2],["المخططات",Layers],["التقارير",FileText],["المستخدمون",Users]];
 function Login({onLogin}) {
