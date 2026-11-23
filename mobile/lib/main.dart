@@ -66,13 +66,26 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> submit() async {
     setState(() { busy = true; error = ''; });
     try {
-      apiBase = server.text.trim().replaceFirst(RegExp(r'/+
-        headers: {'Content-Type':'application/json'},
-        body: jsonEncode({'email':email.text.trim(),'password':password.text}));
-      if (r.statusCode != 200) throw Exception('بيانات الدخول غير صحيحة أو الخادم غير متاح');
+      apiBase = server.text.trim().replaceAll(RegExp(r'/+$'), '');
+      if (!apiBase.startsWith('http://') && !apiBase.startsWith('https://')) {
+        throw Exception('أدخل عنوان API يبدأ بـ http أو https');
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('api_base', apiBase);
+      final r = await http.post(
+        Uri.parse('$apiBase/auth/token/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.text.trim(), 'password': password.text}),
+      );
+      if (r.statusCode != 200) {
+        throw Exception('بيانات الدخول غير صحيحة أو الخادم غير متاح');
+      }
       widget.onLogin(jsonDecode(r.body)['access'] as String);
-    } catch (e) { setState(() => error = e.toString().replaceFirst('Exception: ','')); }
-    finally { if(mounted) setState(() => busy = false); }
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
   @override Widget build(BuildContext context) => Scaffold(body: Center(child: SingleChildScrollView(
     padding: const EdgeInsets.all(24), child: Card(elevation: 2, child: Padding(padding: const EdgeInsets.all(24),
