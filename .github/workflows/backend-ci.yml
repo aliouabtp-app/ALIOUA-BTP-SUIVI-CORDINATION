@@ -116,6 +116,10 @@ jobs:
           content = app.read_text()
           content = re.sub(r'compileSdk = flutter.compileSdkVersion', 'compileSdk = 36', content)
           content = re.sub(r'compileSdkVersion flutter.compileSdkVersion', 'compileSdkVersion 36', content)
+          # الكاميرا الحديثة تتطلب Android 6.0 (API 23) على الأقل
+          content = re.sub(r'minSdk = flutter.minSdkVersion', 'minSdk = 23', content)
+          content = re.sub(r'minSdkVersion flutter.minSdkVersion', 'minSdkVersion 23', content)
+          content = re.sub(r'ndkVersion = flutter.ndkVersion', 'ndkVersion = "26.1.10909125"', content)
           app.write_text(content)
 
           wrapper = Path("android/gradle/wrapper/gradle-wrapper.properties")
