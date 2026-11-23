@@ -26,7 +26,30 @@ Future<Database> openLocalDb() async {
     });
 }
 
-void main() => runApp(const AliouaApp());
+void main() {
+  // التقاط أخطاء Flutter غير المعالجة وعرضها داخل التطبيق بدل الشاشة البيضاء.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+  };
+  ErrorWidget.builder = (details) => Material(
+    color: cream,
+    child: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.deepOrange, size: 48),
+          const SizedBox(height: 12),
+          const Text('حدث خطأ في عرض الصفحة', textDirection: TextDirection.rtl,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: navy)),
+          const SizedBox(height: 8),
+          Text(details.exceptionAsString(), textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+        ]),
+      ),
+    ),
+  );
+  runApp(const AliouaApp());
+}
 
 class AliouaApp extends StatefulWidget {
   const AliouaApp({super.key});
@@ -38,7 +61,7 @@ class _AliouaAppState extends State<AliouaApp> {
   Future<void> _loadToken() async {
     final p = await SharedPreferences.getInstance();
     apiBase = p.getString('api_base') ?? apiBase;
-    setState(() => token = p.getString('access'));
+    if (!mounted) return;\n    setState(() { token = p.getString('access'); loading = false; });
   }
   void _loggedIn(String value) async {
     final p = await SharedPreferences.getInstance(); await p.setString('access', value);
@@ -49,8 +72,8 @@ class _AliouaAppState extends State<AliouaApp> {
     theme: ThemeData(useMaterial3: true, scaffoldBackgroundColor: cream,
       colorScheme: ColorScheme.fromSeed(seedColor: teal, primary: teal),
       fontFamily: 'Roboto'),
-    home: token == null ? LoginPage(onLogin: _loggedIn) : IssuesPage(token: token!, onLogout: () async {
-      final p = await SharedPreferences.getInstance(); await p.remove('access'); setState(() => token = null);
+    home: loading ? const Scaffold(body: Center(child: CircularProgressIndicator(color: teal))) : token == null ? LoginPage(onLogin: _loggedIn) : IssuesPage(token: token!, onLogout: () async {
+      final p = await SharedPreferences.getInstance(); await p.remove('access'); if (mounted) setState(() => token = null);
     }));
 }
 
