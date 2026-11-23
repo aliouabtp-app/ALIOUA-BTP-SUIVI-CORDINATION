@@ -1,14 +1,16 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+# تحميل الإعدادات المحلية إن وُجد الملف، مع إبقاء الأسرار خارج Git.
+load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if len(SECRET_KEY) < 50:
     raise RuntimeError("DJANGO_SECRET_KEY must be set to at least 50 characters.")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = [x.strip() for x in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if x.strip()]
-
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
@@ -22,8 +24,7 @@ MIDDLEWARE = [
 ]
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [{
-    "BACKEND": "django.template.backends.django.DjangoTemplates",
-    "DIRS": [], "APP_DIRS": True,
+    "BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [], "APP_DIRS": True,
     "OPTIONS": {"context_processors": [
         "django.template.context_processors.request", "django.contrib.auth.context_processors.auth",
         "django.contrib.messages.context_processors.messages",
@@ -57,12 +58,10 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 25,
 }
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
-SPECTACULAR_SETTINGS = {
-    "TITLE": "ALIOUA BTP API", "DESCRIPTION": "واجهة متابعة وتنسيق أعمال البناء",
-    "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False,
-}
+SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": timedelta(minutes=30), "REFRESH_TOKEN_LIFETIME": timedelta(days=7), "AUTH_HEADER_TYPES": ("Bearer",)}
+SPECTACULAR_SETTINGS = {"TITLE": "ALIOUA BTP API", "DESCRIPTION": "واجهة متابعة وتنسيق أعمال البناء", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False}
+if not DEBUG:
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = "DENY"
