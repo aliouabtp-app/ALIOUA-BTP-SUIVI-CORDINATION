@@ -46,3 +46,20 @@ class ApiFoundationTests(TestCase):
         self.client.force_authenticate(self.admin)
         r=self.client.post("/api/tasks/",{"space":str(self.space.id),"name":"Invalid progress","progress":150},format="json")
         self.assertEqual(r.status_code,400)
+
+    def test_inspector_cannot_delete_issue(self):
+        issue=Issue.objects.create(space=self.space,title="Protected issue",created_by=self.admin)
+        self.client.force_authenticate(self.inspector)
+        response=self.client.delete(f"/api/issues/{issue.id}/")
+        self.assertEqual(response.status_code,403)
+        self.assertFalse(Issue.all_objects.get(pk=issue.id).is_deleted)
+
+    def test_manager_can_soft_delete_issue(self):
+        manager=User.objects.create_user(email="manager@test.local",password="StrongPass123!",full_name="Manager",role="MANAGER")
+        issue=Issue.objects.create(space=self.space,title="Archive me",created_by=self.admin)
+        self.client.force_authenticate(manager)
+        response=self.client.delete(f"/api/issues/{issue.id}/")
+        self.assertEqual(response.status_code,204)
+        archived=Issue.all_objects.get(pk=issue.id)
+        self.assertTrue(archived.is_deleted)
+        self.assertTrue(AuditLog.objects.filter(entity="Issue",entity_id=str(issue.id),action="SOFT_DELETE").exists())
