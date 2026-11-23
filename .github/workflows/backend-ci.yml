@@ -85,17 +85,16 @@ jobs:
           from pathlib import Path
           import re
           settings = Path("android/settings.gradle")
-          source = settings.read_text()
-          source, count = re.subn(
-              r'(id\\s+["\\']org\\.jetbrains\\.kotlin\\.android["\\']\\s+version\\s+["\\'])[0-9.]+(["\\'])',
-              r'\\g<1>2.1.0\\2',
-              source,
-          )
-          if count == 0:
-              raise SystemExit("Kotlin Android plugin declaration was not found in android/settings.gradle")
-          settings.write_text(source)
-          print("Updated Kotlin plugin to 2.1.0")
-          print("\\n".join(line for line in source.splitlines() if "kotlin.android" in line))
+          lines = settings.read_text().splitlines()
+          changed = False
+          for index, line in enumerate(lines):
+              if "org.jetbrains.kotlin.android" in line:
+                  lines[index] = re.sub(r'version "[0-9.]+"', 'version "2.1.0"', line)
+                  changed = True
+          if not changed:
+              raise SystemExit("Kotlin Android plugin declaration was not found")
+          settings.write_text("\\n".join(lines) + "\\n")
+          print("\\n".join(line for line in lines if "kotlin.android" in line))
           PY
       - name: Build release APK
         run: flutter build apk --release --dart-define=API_BASE=http://127.0.0.1:8000/api
