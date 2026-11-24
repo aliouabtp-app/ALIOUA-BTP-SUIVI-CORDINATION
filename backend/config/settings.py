@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from core.version import APP_VERSION
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # تحميل الإعدادات المحلية إن وُجد الملف، مع إبقاء الأسرار خارج Git.
@@ -61,7 +62,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
 }
 SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": timedelta(minutes=30), "REFRESH_TOKEN_LIFETIME": timedelta(days=7), "AUTH_HEADER_TYPES": ("Bearer",)}
-SPECTACULAR_SETTINGS = {"TITLE": "ALIOUA BTP API", "DESCRIPTION": "واجهة متابعة وتنسيق أعمال البناء", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False}
+SPECTACULAR_SETTINGS = {"TITLE": "ALIOUA BTP API", "DESCRIPTION": "واجهة متابعة وتنسيق أعمال البناء", "VERSION": APP_VERSION, "SERVE_INCLUDE_SCHEMA": False}
 if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_SECURE = True
