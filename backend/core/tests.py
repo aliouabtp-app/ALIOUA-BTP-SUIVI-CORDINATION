@@ -1,4 +1,7 @@
-from django.test import TestCase
+import os
+from unittest.mock import patch
+from django.conf import settings
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 from .models import User,Project,Building,Level,Space,Issue,Task,AuditLog
 
