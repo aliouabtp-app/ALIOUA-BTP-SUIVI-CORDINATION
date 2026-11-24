@@ -11,6 +11,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 String apiBase = const String.fromEnvironment('API_BASE', defaultValue: 'http://127.0.0.1:8000/api');
 // تخزين JWT مشفر عبر Android Keystore بدلاً من SharedPreferences النصي.
@@ -159,6 +161,7 @@ class _LoginPageState extends State<LoginPage> {
         TextField(controller: password, obscureText:true, decoration: const InputDecoration(labelText:'كلمة المرور',border:OutlineInputBorder())),
         if(error.isNotEmpty) Padding(padding: const EdgeInsets.only(top:12),child:Text(error,style:const TextStyle(color:Colors.red))),
         const SizedBox(height: 18), SizedBox(width:double.infinity,child:FilledButton(onPressed:busy?null:submit,child:Text(busy?'جارٍ الدخول…':'تسجيل الدخول'))),
+        const SizedBox(height: 4), TextButton(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AboutPage())),child:const Text('حول التطبيق')),
       ]))))));
 }
 
@@ -263,6 +266,7 @@ class _IssuesPageState extends State<IssuesPage> {
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(backgroundColor:navy,foregroundColor:Colors.white,title:const Text('ملاحظات الموقع'),actions:[
       IconButton(onPressed:syncing?null:_sync,icon:syncing?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.sync)),
+      IconButton(tooltip:'حول التطبيق',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AboutPage())),icon:const Icon(Icons.info_outline)),
       IconButton(onPressed:widget.onLogout,icon:const Icon(Icons.logout))
     ]),
     floatingActionButton:FloatingActionButton.extended(onPressed:_newIssue,backgroundColor:teal,foregroundColor:Colors.white,icon:const Icon(Icons.add),label:const Text('ملاحظة جديدة')),
@@ -326,5 +330,98 @@ class QrScanPage extends StatelessWidget {
         }
       }
     }),
+  );
+}
+
+ 
+// ---------- حول التطبيق ----------
+const appCommit = String.fromEnvironment('APP_COMMIT', defaultValue: 'unknown');
+
+String _shortCommit(String? value) {
+  if (value == null || value.isEmpty || value == 'unknown') return 'غير معروف';
+  return value.length > 12 ? value.substring(0, 12) : value;
+}
+
+class AboutPage extends StatefulWidget {
+  const AboutPage({super.key});
+  @override State<AboutPage> createState() => _AboutPageState();
+}
+class _AboutPageState extends State<AboutPage> {
+  String appVersion = '…';
+  Map<String, dynamic>? server;
+  String? checkedAt;
+  bool loading = true, online = false;
+  @override void initState() { super.initState(); _load(); }
+  Future<void> _load() async {
+    setState(() => loading = true);
+    final info = await PackageInfo.fromPlatform();
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('about_cache');
+    if (cached != null) {
+      try {
+        final m = jsonDecode(cached) as Map<String, dynamic>;
+        server = m['data'] as Map<String, dynamic>?;
+        checkedAt = m['at'] as String?;
+      } catch (_) {
+        // تجاهل تخزين تالف؛ سيُستبدل عند أول نجاح.
+      }
+    }
+    var reached = false;
+    try {
+      final r = await http.get(Uri.parse('$apiBase/about/')).timeout(const Duration(seconds: 8));
+      if (r.statusCode == 200) {
+        final data = jsonDecode(r.body) as Map<String, dynamic>;
+        final now = DateTime.now().toIso8601String();
+        await prefs.setString('about_cache', jsonEncode({'data': data, 'at': now}));
+        server = data; checkedAt = now; reached = true;
+      }
+    } catch (_) {
+      // دون اتصال: نعرض آخر قيم محفوظة إن وُجدت.
+    }
+    if (!mounted) return;
+    setState(() { appVersion = '${info.version} (${info.buildNumber})'; online = reached; loading = false; });
+  }
+  String _summary() => [
+    'ALIOUA BTP',
+    'التطبيق: $appVersion',
+    'commit التطبيق: ${_shortCommit(appCommit)}',
+    'API: $apiBase',
+    'إصدار الخادم: ${server?['version'] ?? 'غير معروف'}',
+    'commit الخادم: ${_shortCommit(server?['commit'] as String?)}',
+    'آخر فحص ناجح: ${checkedAt ?? 'لم يتم'}',
+  ].join('\n');
+  Widget _row(String label, String value) => ListTile(
+    title: Text(label, style: const TextStyle(color: Colors.blueGrey, fontSize: 13)),
+    subtitle: Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: SelectableText(value, textDirection: TextDirection.ltr,
+        style: const TextStyle(color: navy, fontSize: 15, fontWeight: FontWeight.w600)),
+    ),
+  );
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('حول التطبيق'), actions: [
+      IconButton(tooltip: 'نسخ المعلومات', icon: const Icon(Icons.copy), onPressed: () async {
+        await Clipboard.setData(ClipboardData(text: _summary()));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ معلومات الإصدار.')));
+      }),
+      IconButton(tooltip: 'تحديث', icon: const Icon(Icons.refresh), onPressed: loading ? null : _load),
+    ]),
+    body: ListView(padding: const EdgeInsets.all(14), children: [
+      Card(child: Column(children: [
+        _row('إصدار التطبيق', appVersion),
+        _row('commit التطبيق', _shortCommit(appCommit)),
+      ])),
+      Card(child: Column(children: [
+        ListTile(
+          leading: Icon(online ? Icons.cloud_done : Icons.cloud_off, color: online ? teal : Colors.orange),
+          title: Text(loading ? 'جارٍ الفحص…' : online ? 'متصل بالخادم' : 'غير متصل — تُعرض آخر قيم معروفة'),
+        ),
+        _row('عنوان API', apiBase),
+        _row('إصدار الخادم', '${server?['version'] ?? 'غير معروف'}'),
+        _row('commit الخادم', _shortCommit(server?['commit'] as String?)),
+        if (checkedAt != null) _row('آخر فحص ناجح', checkedAt!.substring(0, 19).replaceFirst('T', ' ')),
+      ])),
+    ]),
   );
 }
