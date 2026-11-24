@@ -15,7 +15,7 @@ for prefix,view,name in [
 ("progress",ProgressViewSet,"progress"),("audit-logs",AuditLogViewSet,"audit-log"),("users",UserViewSet,"user")]:
     router.register(prefix,view,basename=name)
 urlpatterns=[
- path("admin/",admin.site.urls),path("api/health/",HealthView.as_view()),
+ path("admin/",admin.site.urls),path("api/health/",HealthView.as_view()),path("api/about/",AboutView.as_view()),
  path("api/auth/token/",TokenObtainPairView.as_view()),path("api/auth/token/refresh/",TokenRefreshView.as_view()),
  path("api/auth/me/",CurrentUserView.as_view()),path("api/dashboard/",DashboardView.as_view()),
  path("api/reports/issues.xlsx",IssueExcelExportView.as_view()),path("api/reports/issues.pdf",IssuePdfExportView.as_view()),
