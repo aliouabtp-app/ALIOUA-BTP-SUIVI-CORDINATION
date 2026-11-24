@@ -65,3 +65,6 @@ body{background:#eef3f7;background-image:radial-gradient(ellipse at 85% 0%,#dceb
 .kanban-empty{font-size:11px;color:#96a6af;text-align:center;padding:28px 8px;background:#ffffff80;border:1px dashed #d5e0e7;border-radius:10px}
 @media(max-width:1000px){.kanban-board{grid-template-columns:repeat(4,minmax(225px,1fr))}}
 @media(max-width:600px){.kanban-board{grid-template-columns:repeat(4,minmax(245px,1fr));margin-inline:-4px}.task-card{padding:11px}}
+
+/* عناصر تحكم الحالة في قائمة الملاحظات */
+.issue-status-select{max-width:150px;border:1px solid #dce7ec;border-radius:9px;background:#f7fafc;color:#31566b;padding:7px 9px;font:inherit;font-size:11px;cursor:pointer}.issue-status-select:focus{outline:2px solid #147db633;border-color:#147db6}@media(max-width:600px){.issue-status-select{max-width:125px;padding:6px;font-size:10px}}
