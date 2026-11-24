@@ -266,6 +266,7 @@ class _IssuesPageState extends State<IssuesPage> {
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(backgroundColor:navy,foregroundColor:Colors.white,title:const Text('ملاحظات الموقع'),actions:[
       IconButton(onPressed:syncing?null:_sync,icon:syncing?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.sync)),
+      IconButton(tooltip:'المهام',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>TasksPage(token:widget.token))),icon:const Icon(Icons.checklist_rounded)),
       IconButton(tooltip:'حول التطبيق',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AboutPage())),icon:const Icon(Icons.info_outline)),
       IconButton(onPressed:widget.onLogout,icon:const Icon(Icons.logout))
     ]),
@@ -315,6 +316,120 @@ class _NewIssuePageState extends State<NewIssuePage> {
     const SizedBox(height:8),const Text('تُحفظ الملاحظة على الجهاز أولاً. تحتاج المزامنة إلى معرّف مساحة صالح واتصال بالخادم.',style:TextStyle(color:Colors.blueGrey,fontSize:12))
   ]));
 }
+
+// ---------- إدارة المهام الميدانية ----------
+class TasksPage extends StatefulWidget {
+  final String token;
+  const TasksPage({super.key, required this.token});
+  @override State<TasksPage> createState() => _TasksPageState();
+}
+class _TasksPageState extends State<TasksPage> {
+  List<Map<String,dynamic>> tasks=[];
+  List<Map<String,dynamic>> spaces=[];
+  bool loading=true, saving=false;
+  String error='';
+  @override void initState(){super.initState();_load();}
+  Future<void> _load() async {
+    setState(()=>loading=true);
+    try {
+      final headers={'Authorization':'Bearer ${widget.token}'};
+      final responses=await Future.wait([
+        http.get(Uri.parse('$apiBase/tasks/'),headers:headers),
+        http.get(Uri.parse('$apiBase/spaces/'),headers:headers),
+      ]).timeout(const Duration(seconds:15));
+      if(responses.any((r)=>r.statusCode!=200)) throw Exception('تعذر تحميل المهام والمساحات');
+      final a=jsonDecode(responses[0].body), b=jsonDecode(responses[1].body);
+      final taskList=a is List?a:(a['results'] as List? ?? []);
+      final spaceList=b is List?b:(b['results'] as List? ?? []);
+      if(!mounted)return;
+      setState((){
+        tasks=taskList.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList();
+        spaces=spaceList.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList();
+        error='';
+      });
+    } catch(e){if(mounted)setState(()=>error='تعذر الاتصال بالخادم. تحقق من الشبكة.');}
+    finally{if(mounted)setState(()=>loading=false);}
+  }
+  Future<void> _update(Map<String,dynamic> task, Map<String,dynamic> changes) async {
+    try {
+      final r=await http.patch(Uri.parse('$apiBase/tasks/${task['id']}/'),
+        headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},
+        body:jsonEncode(changes));
+      if(r.statusCode<200||r.statusCode>=300)throw Exception();
+      await _load();
+    } catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر تحديث المهمة.')));}
+  }
+  Future<void> _newTask() async {
+    final name=TextEditingController(), description=TextEditingController();
+    String? spaceId;
+    int progress=0;
+    String status='TODO';
+    final created=await showDialog<bool>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(context,setDialog)=>AlertDialog(
+      title:const Text('إضافة مهمة ميدانية'),
+      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        TextField(controller:name,decoration:const InputDecoration(labelText:'اسم المهمة')),
+        const SizedBox(height:10),
+        DropdownButtonFormField<String>(value:spaceId,decoration:const InputDecoration(labelText:'المساحة'),items:spaces.map((x)=>DropdownMenuItem(value:x['id'].toString(),child:Text(x['name']?.toString()??'مساحة'))).toList(),onChanged:(v)=>setDialog(()=>spaceId=v)),
+        const SizedBox(height:10),
+        TextField(controller:description,maxLines:2,decoration:const InputDecoration(labelText:'الوصف')),
+        const SizedBox(height:12),
+        Row(children:[const Text('الإنجاز'),const Spacer(),Text('$progress%')]),
+        Slider(value:progress.toDouble(),min:0,max:100,divisions:20,onChanged:(v)=>setDialog(()=>progress=v.round())),
+        DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(labelText:'الحالة'),items:const [
+          DropdownMenuItem(value:'TODO',child:Text('جديدة')),
+          DropdownMenuItem(value:'IN_PROGRESS',child:Text('قيد التنفيذ')),
+          DropdownMenuItem(value:'BLOCKED',child:Text('متوقفة')),
+          DropdownMenuItem(value:'DONE',child:Text('مكتملة')),
+        ],onChanged:(v)=>setDialog(()=>status=v??'TODO')),
+      ])),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const Text('إلغاء')),
+        FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const Text('حفظ')),
+      ],
+    )));
+    if(created!=true)return;
+    if(name.text.trim().isEmpty||spaceId==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أدخل اسم المهمة واختر المساحة.')));return;}
+    setState(()=>saving=true);
+    try{
+      final r=await http.post(Uri.parse('$apiBase/tasks/'),
+        headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},
+        body:jsonEncode({'name':name.text.trim(),'description':description.text.trim(),'space':spaceId,'progress':progress,'status':status}));
+      if(r.statusCode!=201)throw Exception();
+      await _load();
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تمت إضافة المهمة.')));
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر حفظ المهمة. تحقق من صلاحية الحساب.')));}
+    finally{if(mounted)setState(()=>saving=false);}
+  }
+  @override Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('مهام الموقع'),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh))]),
+    floatingActionButton:FloatingActionButton.extended(onPressed:saving?null:_newTask,icon:const Icon(Icons.add),label:const Text('مهمة جديدة')),
+    body:RefreshIndicator(onRefresh:_load,child:loading?const Center(child:CircularProgressIndicator()):error.isNotEmpty?ListView(children:[Padding(padding:const EdgeInsets.all(24),child:Text(error,textAlign:TextAlign.center))]):tasks.isEmpty?ListView(children:const [SizedBox(height:150),Center(child:Text('لا توجد مهام مسجلة بعد'))]):ListView.builder(
+      padding:const EdgeInsets.all(14),itemCount:tasks.length,itemBuilder:(context,index){
+        final task=tasks[index], progress=(task['progress'] as num?)?.toInt()??0, status=task['status']?.toString()??'TODO';
+        return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Row(children:[Expanded(child:Text(task['name']?.toString()??'مهمة',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))),Text('$progress%',style:const TextStyle(color:teal,fontWeight:FontWeight.bold))]),
+          if((task['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:5),child:Text(task['description'].toString(),style:const TextStyle(color:Colors.blueGrey,fontSize:12))),
+          const SizedBox(height:10),
+          ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:progress/100,minHeight:8,backgroundColor:const Color(0xFFE7EEF1),color:teal)),
+          const SizedBox(height:10),
+          Row(children:[
+            Expanded(child:DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(isDense:true,labelText:'الحالة'),items:const [
+              DropdownMenuItem(value:'TODO',child:Text('جديدة')),
+              DropdownMenuItem(value:'IN_PROGRESS',child:Text('قيد التنفيذ')),
+              DropdownMenuItem(value:'BLOCKED',child:Text('متوقفة')),
+              DropdownMenuItem(value:'DONE',child:Text('مكتملة')),
+            ],onChanged:(v){if(v!=null)_update(task,{'status':v});})),
+            const SizedBox(width:12),
+            IconButton(tooltip:'تعديل نسبة الإنجاز',onPressed:()=>showDialog<void>(context:context,builder:(ctx){
+              double value=progress.toDouble();
+              return StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(title:const Text('تحديث الإنجاز'),content:Column(mainAxisSize:MainAxisSize.min,children:[Text('${value.round()}%'),Slider(value:value,min:0,max:100,divisions:20,onChanged:(v)=>setDialog(()=>value=v))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){Navigator.pop(ctx);_update(task,{'progress':value.round()});},child:const Text('تحديث'))]));
+            }),icon:const Icon(Icons.tune,color:teal)),
+          ]),
+        ])));
+      })),
+  );
+}
+
 class QrScanPage extends StatelessWidget {
   const QrScanPage({super.key});
   @override Widget build(BuildContext context)=>Scaffold(
