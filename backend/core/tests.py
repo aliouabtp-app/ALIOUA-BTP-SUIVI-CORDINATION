@@ -4,6 +4,7 @@ from django.conf import settings
 from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 from .models import User,Project,Building,Level,Space,Issue,Task,AuditLog
+from .version import APP_VERSION, clean_commit, clean_build_date
 
 class ApiFoundationTests(TestCase):
     def setUp(self):
