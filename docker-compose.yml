@@ -1,6 +1,10 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        APP_COMMIT: "${APP_COMMIT:-}"
+        APP_BUILD_DATE: "${APP_BUILD_DATE:-}"
     env_file:
       - ./backend/.env
     ports:

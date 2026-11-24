@@ -1,6 +1,10 @@
-from django.test import TestCase
+import os
+from unittest.mock import patch
+from django.conf import settings
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 from .models import User,Project,Building,Level,Space,Issue,Task,AuditLog
+from .version import APP_VERSION, clean_commit, clean_build_date
 
 class ApiFoundationTests(TestCase):
     def setUp(self):
@@ -63,3 +67,49 @@ class ApiFoundationTests(TestCase):
         archived=Issue.all_objects.get(pk=issue.id)
         self.assertTrue(archived.is_deleted)
         self.assertTrue(AuditLog.objects.filter(entity="Issue",entity_id=str(issue.id),action="SOFT_DELETE").exists())
+
+ 
+class VersionHelpersTests(SimpleTestCase):
+    def test_clean_commit_accepts_hex_and_shortens(self):
+        self.assertEqual(clean_commit("0123456789abcdef0123456789abcdef01234567"), "0123456789ab")
+        self.assertEqual(clean_commit(" ABCDEF1 "), "abcdef1")
+
+    def test_clean_commit_rejects_anything_else(self):
+        for bad in ("", None, "unknown", "<script>alert(1)</script>", "abc", "xyz1234", "abcdef1\\nINJECT"):
+            self.assertEqual(clean_commit(bad), "unknown")
+
+    def test_clean_build_date(self):
+        self.assertEqual(clean_build_date("2026-11-24"), "2026-11-24")
+        self.assertEqual(clean_build_date("2026-11-24T09:30:00Z"), "2026-11-24T09:30:00Z")
+        for bad in ("", None, "yesterday", "2026-11-24<b>"):
+            self.assertIsNone(clean_build_date(bad))
+
+
+class AboutEndpointTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_about_is_public_with_exact_fields(self):
+        with patch.dict(os.environ, {"APP_COMMIT": "", "APP_BUILD_DATE": ""}):
+            r = self.client.get("/api/about/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(set(r.data), {"app", "version", "commit", "build_date"})
+        self.assertEqual(r.data["version"], APP_VERSION)
+        self.assertEqual(r.data["commit"], "unknown")
+        self.assertIsNone(r.data["build_date"])
+
+    def test_about_reports_commit_and_date_from_environment(self):
+        env = {"APP_COMMIT": "0123456789abcdef0123456789abcdef01234567", "APP_BUILD_DATE": "2026-11-24T09:30:00Z"}
+        with patch.dict(os.environ, env):
+            r = self.client.get("/api/about/")
+        self.assertEqual(r.data["commit"], "0123456789ab")
+        self.assertEqual(r.data["build_date"], "2026-11-24T09:30:00Z")
+
+    def test_about_never_reflects_untrusted_environment_values(self):
+        with patch.dict(os.environ, {"APP_COMMIT": "<script>x</script>", "APP_BUILD_DATE": "<b>x</b>"}):
+            r = self.client.get("/api/about/")
+        self.assertNotIn(b"script", r.content)
+        self.assertEqual(r.data["commit"], "unknown")
+
+    def test_openapi_version_matches_app_version(self):
+        self.assertEqual(settings.SPECTACULAR_SETTINGS["VERSION"], APP_VERSION)

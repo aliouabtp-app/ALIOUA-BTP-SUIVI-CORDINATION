@@ -9,6 +9,8 @@ from drf_spectacular.utils import extend_schema
 from . import models
 from .serializers import *
 from .permissions import RolePermission, AdminOnlyPermission
+from .version import APP_VERSION, clean_commit, clean_build_date
+import os
 
 class HealthView(APIView):
     permission_classes=[AllowAny]; authentication_classes=[]
@@ -16,6 +18,14 @@ class HealthView(APIView):
     def get(self,request):
         with connection.cursor() as c: c.execute("SELECT 1"); c.fetchone()
         return Response({"status":"ok","database":"ok","service":"ALIOUA BTP API"})
+
+class AboutView(APIView):
+    """معلومات عامة غير حساسة عن نسخة الخادم لشاشة «حول التطبيق». لا أسرار ولا إعدادات داخلية."""
+    permission_classes=[AllowAny]; authentication_classes=[]
+    @extend_schema(tags=["النظام"],summary="حول التطبيق: إصدار الخادم وcommit")
+    def get(self,request):
+        return Response({"app":"ALIOUA BTP","version":APP_VERSION,
+            "commit":clean_commit(os.getenv("APP_COMMIT")),"build_date":clean_build_date(os.getenv("APP_BUILD_DATE"))})
 
 class CurrentUserView(APIView):
     permission_classes=[IsAuthenticated]

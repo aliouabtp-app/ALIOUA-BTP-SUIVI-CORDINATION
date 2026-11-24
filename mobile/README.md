@@ -9,6 +9,8 @@
 - إرسال الملاحظة إلى API أولاً ثم رفع الصورة إلى endpoint الصور.
 - الاحتفاظ بحالة pending/photo_pending عند فشل جزء من المزامنة وإعادة المحاولة لاحقاً.
 
+- شاشة «حول التطبيق» (من شاشة الدخول ومن أعلى قائمة الملاحظات): إصدار التطبيق وcommit وإصدار الخادم، وتعمل دون اتصال بآخر قيم محفوظة، مع زر نسخ للدعم.
+
 ## إعداد وتشغيل
 يتطلب Flutter SDK وAndroid SDK (مجانيان ومفتوحا المصدر):
 ```bash
@@ -20,7 +22,7 @@ flutter run --dart-define=API_BASE=http://192.168.x.x:8000/api
 
 ## بناء APK
 ```bash
-flutter build apk --release --dart-define=API_BASE=http://192.168.x.x:8000/api
+flutter build apk --release --dart-define=API_BASE=http://192.168.x.x:8000/api --dart-define=APP_COMMIT=$(git rev-parse HEAD)
 ```
 الملف الناتج: `build/app/outputs/flutter-apk/app-release.apk`.
 

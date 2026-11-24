@@ -56,6 +56,8 @@ jobs:
       - name: Install web dependencies
         run: npm install
       - name: Build web app
+        env:
+          VITE_APP_COMMIT: ${{ github.sha }}
         run: npm run build
 
   mobile:
@@ -128,7 +130,7 @@ jobs:
           print("Android Gradle Plugin 8.6.1, Kotlin 2.1.0, compileSdk 36, Gradle 8.7")
           PY
       - name: Build release APK
-        run: flutter build apk --release --dart-define=API_BASE=http://127.0.0.1:8000/api
+        run: flutter build apk --release --dart-define=API_BASE=http://127.0.0.1:8000/api --dart-define=APP_COMMIT=${{ github.sha }}
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
