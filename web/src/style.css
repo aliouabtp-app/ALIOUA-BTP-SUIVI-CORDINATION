@@ -68,3 +68,13 @@ body{background:#eef3f7;background-image:radial-gradient(ellipse at 85% 0%,#dceb
 
 /* عناصر تحكم الحالة في قائمة الملاحظات */
 .issue-status-select{max-width:150px;border:1px solid #dce7ec;border-radius:9px;background:#f7fafc;color:#31566b;padding:7px 9px;font:inherit;font-size:11px;cursor:pointer}.issue-status-select:focus{outline:2px solid #147db633;border-color:#147db6}@media(max-width:600px){.issue-status-select{max-width:125px;padding:6px;font-size:10px}}
+
+/* متابعة الإنجاز حسب المساحة */
+.progress-space-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(100px,2fr) 52px;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid #edf2f5;background:#fff}
+.progress-space-row:last-child{border-bottom:0}
+.progress-space-row b{display:block;font-size:12px;color:#244b61}
+.progress-space-row small{display:block;font-size:10px;color:#91a2aa;margin-top:4px}
+.progress-space-row strong{font-size:13px;color:#167db5;text-align:left}
+.progress-space-track{height:9px;background:#edf2f5;border-radius:20px;overflow:hidden}
+.progress-space-track i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#147db6,#159b83,#e3b33e);transition:width .35s ease}
+@media(max-width:600px){.progress-space-row{grid-template-columns:1fr 48px;gap:8px}.progress-space-track{grid-column:1/-1;grid-row:2}.progress-space-row strong{grid-column:2;grid-row:1}}
