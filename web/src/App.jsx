@@ -8,7 +8,7 @@ import {ResponsiveContainer,BarChart,Bar,XAxis,YAxis,Tooltip,CartesianGrid,PieCh
 const API=(import.meta.env.VITE_API_URL||"/api").replace(/\/$/,"");
 const api=axios.create({baseURL:API});
 const WEB_VERSION=typeof __APP_VERSION__!=="undefined"?__APP_VERSION__:"dev";
-const nav=[["الرئيسية",Home],["الملاحظات",AlertCircle],["المهام",ClipboardList],["المشروع",Building2],["المخططات",Layers],["التقارير",FileText],["المستخدمون",Users],["حول التطبيق",Info]];
+const nav=[["الرئيسية",Home],["الملاحظات",AlertCircle],["المهام",ClipboardList],["التقدم",Activity],["المشروع",Building2],["المخططات",Layers],["التقارير",FileText],["المستخدمون",Users],["حول التطبيق",Info]];
 function Login({onLogin}) {
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [busy,setBusy]=useState(false); const [error,setError]=useState("");
  async function submit(e){e.preventDefault();setBusy(true);setError("");try{const r=await api.post("/auth/token/",{email,password});onLogin(r.data.access,r.data.refresh);}catch{setError("تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور واتصال الخادم.");}finally{setBusy(false);}}
