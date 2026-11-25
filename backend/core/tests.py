@@ -170,4 +170,4 @@ class DxfModelApiTests(TestCase):
             self.assertTrue(response.data["file"].endswith(".glb"))
             listing = self.client.get("/api/models3d/")
             self.assertEqual(listing.status_code, 200)
-            self.assertEqual(len(listing.data), 1)
+            self.assertEqual(len(listing.data["results"]), 1)
