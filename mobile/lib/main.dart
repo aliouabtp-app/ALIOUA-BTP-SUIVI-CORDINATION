@@ -97,7 +97,7 @@ class _AliouaAppState extends State<AliouaApp> {
   }
   @override Widget build(BuildContext context) => MaterialApp(
     builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox.shrink()),
-    debugShowCheckedModeBanner: false, title: 'ALIOUA BTP',
+    debugShowCheckedModeBanner: false, title: 'إتقان – ALIOUA BTP',
     theme: ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: cream,
@@ -170,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
     padding: const EdgeInsets.all(24), child: Card(elevation: 2, child: Padding(padding: const EdgeInsets.all(24),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.apartment_rounded, size: 48, color: teal),
-        const SizedBox(height: 12), const Text('ALIOUA BTP', style: TextStyle(fontSize: 23,fontWeight: FontWeight.bold,color: navy)),
+        const SizedBox(height: 12), const Text('إتقان – ALIOUA BTP', style: TextStyle(fontSize: 23,fontWeight: FontWeight.bold,color: navy)),
         const Text('متابعة وتنسيق الورش', style: TextStyle(color: Colors.blueGrey)),
         const SizedBox(height: 24),
         TextField(controller: server, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText:'عنوان الخادم API',hintText:'http://192.168.1.10:8000/api',border:OutlineInputBorder())),
@@ -612,7 +612,7 @@ class _AboutPageState extends State<AboutPage> {
     setState(() { appVersion = '${info.version} (${info.buildNumber})'; online = reached; loading = false; });
   }
   String _summary() => [
-    'ALIOUA BTP',
+    'إتقان – ALIOUA BTP',
     'التطبيق: $appVersion',
     'commit التطبيق: ${_shortCommit(appCommit)}',
     'API: $apiBase',
