@@ -44,7 +44,39 @@
 | GET | `/reports/issues.pdf` | ملف PDF للملاحظات |
 | GET | `/spaces/{uuid}/qr/` | صورة PNG لرمز QR الخاص بالمساحة |
 
-## أمثلة
+
+
+## النماذج ثلاثية الأبعاد (DXF → GLB)
+
+| Method | Path | الوصف |
+|---|---|---|
+| GET | `/models3d/` | قائمة النماذج المرتبطة بالطوابق |
+| POST | `/models3d/generate/` | رفع DXF وتوليد GLB محلياً |
+
+طلب التوليد يستخدم `multipart/form-data` والحقول:
+- `file`: ملف DXF فقط، بحد أقصى 20 MiB.
+- `level`: UUID الطابق.
+- `title`: اسم النموذج.
+- `units`: واحدة من `MM`, `CM`, `M`, `IN`, `FT`.
+- `wall_height`: ارتفاع الجدار بالمتر، من 1 إلى 10.
+- `wall_thickness`: سماكة الجدار بالمتر، من 0.05 إلى 0.50.
+- `layer_name`: اسم طبقة DXF اختياري؛ عند تركه فارغاً يكتشف الخادم طبقات الجدران المعروفة، أو يستخدم كل الخطوط إذا لم يجدها.
+
+مثال مبسط للحقول:
+```text
+file=<plan.dxf>
+level=<UUID>
+title=Ground floor draft
+units=MM
+wall_height=3
+wall_thickness=0.2
+layer_name=A-WALL
+```
+
+الاستجابة تحتوي على `id`, `title`, `level`, `file` (رابط GLB)، `source_filename`, `source_layer`, `wall_count`, `units`, `wall_height`, `wall_thickness`, وبيانات الإنشاء.
+
+**حدود التحويل:** النسخة الأولى تستخرج LINE وLWPOLYLINE وPOLYLINE وتحوّل كل قطعة خطية إلى جدار مستطيل. لا تستنتج الفتحات أو الأعمدة أو البلاطات أو المناسيب من الواجهات والمقاطع. النتيجة تصور أولي وليست نموذج BIM أو رسماً تنفيذياً. الصلاحية للإنشاء Admin وManager وEngineer؛ القراءة لأي مستخدم مصادق.
+\n## أمثلة
 
 تسجيل الدخول:
 ```json
