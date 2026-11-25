@@ -12,7 +12,7 @@ export default function Workspace({section,token,projects,issues,tasks,onRefresh
  const [progressRows,setProgressRows]=useState([]),[progressForm,setProgressForm]=useState({space:"",percent:0,note:""});
  useEffect(()=>{let active=true; async function load(){setMessage("");try{
    const endpoint=section==="المخططات"?"/drawings/":section==="المستخدمون"?"/users/":section==="المهام"?"/tasks/":section==="الملاحظات"?"/issues/":section==="التقدم"?"/progress/":"";
-   if(endpoint){const r=await api.get(endpoint);if(active)setRows(r.data.results||r.data);}
+   if(endpoint){const r=await api.get(endpoint);if(active){setRows(r.data.results||r.data);if(section==="التقدم")setProgressRows(r.data.results||r.data);}}
    if(["الملاحظات","المهام","المخططات","المشروع","التقدم"].includes(section)){const r=await api.get("/spaces/");if(active)setSpaces(r.data.results||r.data);}
    if(["الملاحظات","المخططات"].includes(section)){const r=await api.get("/drawings/");if(active)setDrawings(r.data.results||r.data);}
    if(section==="المشروع"){const [b,l]=await Promise.all([api.get("/buildings/"),api.get("/levels/")]);if(active){setBuildings(b.data.results||b.data);setLevels(l.data.results||l.data);}}
