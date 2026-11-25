@@ -2,13 +2,13 @@ import {useEffect,useMemo,useState} from "react";
 import axios from "axios";
 import Workspace from "./Workspace.jsx";
 import About from "./About.jsx";
-import {Activity,AlertCircle,ArrowUpLeft,Building2,CheckCircle2,ClipboardList,FileText,Home,Info,Layers,LogOut,Plus,RefreshCw,Search,Settings,Users} from "lucide-react";
+import {Activity,AlertCircle,ArrowUpLeft,Box,Building2,CheckCircle2,ClipboardList,FileText,Home,Info,Layers,LogOut,Plus,RefreshCw,Search,Settings,Users} from "lucide-react";
 import {ResponsiveContainer,BarChart,Bar,XAxis,YAxis,Tooltip,CartesianGrid,PieChart,Pie,Cell} from "recharts";
 
 const API=(import.meta.env.VITE_API_URL||"/api").replace(/\/$/,"");
 const api=axios.create({baseURL:API});
 const WEB_VERSION=typeof __APP_VERSION__!=="undefined"?__APP_VERSION__:"dev";
-const nav=[["الرئيسية",Home],["الملاحظات",AlertCircle],["المهام",ClipboardList],["التقدم",Activity],["المشروع",Building2],["المخططات",Layers],["التقارير",FileText],["المستخدمون",Users],["حول التطبيق",Info]];
+const nav=[["الرئيسية",Home],["الملاحظات",AlertCircle],["المهام",ClipboardList],["التقدم",Activity],["النموذج ثلاثي الأبعاد",Box],["المشروع",Building2],["المخططات",Layers],["التقارير",FileText],["المستخدمون",Users],["حول التطبيق",Info]];
 function Login({onLogin}) {
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [busy,setBusy]=useState(false); const [error,setError]=useState("");
  async function submit(e){e.preventDefault();setBusy(true);setError("");try{const r=await api.post("/auth/token/",{email,password});onLogin(r.data.access,r.data.refresh);}catch{setError("تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور واتصال الخادم.");}finally{setBusy(false);}}
