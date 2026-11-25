@@ -193,11 +193,22 @@ class _IssuesPageState extends State<IssuesPage> {
   late Future<Database> dbFuture; List<Map<String,Object?>> rows=[]; bool syncing=false;
   StreamSubscription<List<ConnectivityResult>>? connectionSub;
   @override void initState(){
-    super.initState(); dbFuture=openLocalDb(); _refresh();
-    // محاولة المزامنة تلقائياً عند عودة الاتصال؛ وتبقى البيانات محلية إذا تعذر الخادم.
+    super.initState(); dbFuture=openLocalDb(); _bootstrap();
+    // مزامنة تلقائية عند تغير الاتصال أثناء بقاء التطبيق مفتوحاً.
     connectionSub=Connectivity().onConnectivityChanged.listen((states){
       if(states.any((s)=>s!=ConnectivityResult.none) && mounted) _sync();
     });
+  }
+  // لا نعتمد على حدث تغيّر الشبكة وحده؛ قد يكون الهاتف متصلاً منذ فتح التطبيق.
+  Future<void> _bootstrap() async {
+    await _refresh();
+    if(!mounted) return;
+    try {
+      final states=await Connectivity().checkConnectivity();
+      if(states.any((s)=>s!=ConnectivityResult.none)) await _sync();
+    } catch (_) {
+      // تبقى السجلات محلياً ويستطيع المستخدم إعادة المحاولة يدوياً.
+    }
   }
   @override void dispose(){ connectionSub?.cancel(); super.dispose(); }
   Future<void> _refresh() async {
@@ -255,7 +266,7 @@ class _IssuesPageState extends State<IssuesPage> {
         String serverId=(item['server_id'] as String?)??'';
         if(serverId.isEmpty){
           final body={'title':item['title'],'description':item['description'],'space':item['space_id'],'priority':item['priority'],'due_date':item['due_date']};
-          final response=await http.post(Uri.parse('$apiBase/issues/'),headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},body:jsonEncode(body));
+          final response=await http.post(Uri.parse('$apiBase/issues/'),headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},body:jsonEncode(body)).timeout(const Duration(seconds:20));
           if(response.statusCode!=201) continue;
           final data=jsonDecode(response.body); serverId=data['id'] as String;
           await db.update('issues',{'server_id':serverId,'sync_status':item['image_path']==null?'synced':'photo_pending'},where:'local_id=?',whereArgs:[item['local_id']]);
@@ -266,7 +277,7 @@ class _IssuesPageState extends State<IssuesPage> {
           req.headers['Authorization']='Bearer ${widget.token}';
           req.fields['issue']=serverId;
           req.files.add(await http.MultipartFile.fromPath('image',imagePath));
-          final streamed=await req.send();
+          final streamed=await req.send().timeout(const Duration(seconds:30));
           if(streamed.statusCode==201){
             await db.update('issues',{'sync_status':'synced'},where:'local_id=?',whereArgs:[item['local_id']]);
           }
@@ -351,10 +362,21 @@ class _TasksPageState extends State<TasksPage> {
 
   @override void initState(){
     super.initState();
-    _load();
+    _bootstrap();
     connectionSub=Connectivity().onConnectivityChanged.listen((states){
       if(states.any((s)=>s!=ConnectivityResult.none) && mounted) _sync();
     });
+  }
+  // عند تشغيل صفحة المهام نفحص الشبكة الحالية ونرفع أي عمليات معلقة مباشرة.
+  Future<void> _bootstrap() async {
+    await _load();
+    if(!mounted) return;
+    try {
+      final states=await Connectivity().checkConnectivity();
+      if(states.any((s)=>s!=ConnectivityResult.none)) await _sync();
+    } catch (_) {
+      // عدم توفر فحص الشبكة لا يؤثر على البيانات المخزنة محلياً.
+    }
   }
   @override void dispose(){connectionSub?.cancel();super.dispose();}
 
