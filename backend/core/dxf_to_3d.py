@@ -73,7 +73,6 @@ def generate_glb_from_dxf(path, units="MM", wall_height=3.0, wall_thickness=0.2,
                                 ((start[1] + end[1]) * 0.5) * scale,
                                 float(wall_height) * 0.5]
             mesh.apply_transform(transform)
-            mesh.visual.face_colors = [184, 197, 207, 255]
             meshes.append(mesh)
             wall_count += 1
 
