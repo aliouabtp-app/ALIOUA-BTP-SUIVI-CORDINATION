@@ -1,4 +1,6 @@
 import os
+import tempfile
+import ezdxf
 from unittest.mock import patch
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase
@@ -113,3 +115,24 @@ class AboutEndpointTests(TestCase):
 
     def test_openapi_version_matches_app_version(self):
         self.assertEqual(settings.SPECTACULAR_SETTINGS["VERSION"], APP_VERSION)
+
+
+class DxfTo3DTests(SimpleTestCase):
+    def test_dxf_wall_lines_generate_valid_glb(self):
+        from .dxf_to_3d import generate_glb_from_dxf
+        doc = ezdxf.new("R2010")
+        doc.layers.new("A-WALL")
+        doc.modelspace().add_line((0, 0), (5000, 0), dxfattribs={"layer": "A-WALL"})
+        with tempfile.NamedTemporaryFile(suffix=".dxf") as temp:
+            doc.saveas(temp.name)
+            glb, wall_count, selected_layer = generate_glb_from_dxf(
+                temp.name, units="MM", wall_height=3.0, wall_thickness=0.2
+            )
+        self.assertEqual(glb[:4], b"glTF")
+        self.assertEqual(wall_count, 1)
+        self.assertEqual(selected_layer, "A-WALL")
+
+    def test_dxf_generator_rejects_unsupported_units(self):
+        from .dxf_to_3d import generate_glb_from_dxf
+        with self.assertRaises(ValueError):
+            generate_glb_from_dxf("unused.dxf", units="UNKNOWN")
