@@ -125,3 +125,12 @@ body{background:#eef3f7;background-image:radial-gradient(ellipse at 85% 0%,#dceb
 .model3d-canvas .workspace-message{position:absolute;top:10px;right:10px;left:10px;z-index:2}
 @media(max-width:850px){.model3d-layout{grid-template-columns:1fr}.model3d-list{max-height:220px}.model3d-canvas{height:360px}}
 @media(max-width:560px){.model3d-toolbar{align-items:flex-start;flex-direction:column}.model3d-canvas{height:300px}}
+
+/* عارض PDF بدبابيس الملاحظات */
+.pdf-plan-viewer{position:relative;width:100%;overflow:hidden;border:1px solid #dce7ed;border-radius:12px;background:#f3f6f8;min-height:120px}
+.pdf-plan-viewer canvas{display:block;width:100%;height:auto}
+.pdf-plan-overlay{position:absolute;inset:0;cursor:crosshair}
+.pdf-plan-pin{position:absolute;transform:translate(-50%,-50%);width:25px;height:25px;border:2px solid #fff;border-radius:50% 50% 50% 0;background:#d84a3a;color:#fff;font-size:11px;font-weight:800;box-shadow:0 2px 8px #162e4380;display:flex;align-items:center;justify-content:center;transform-origin:center;rotate:-45deg}
+.pdf-plan-pin span{rotate:45deg;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-plan-state{padding:24px;text-align:center;color:#6d8290;font-size:12px}
+.pdf-plan-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 11px;background:#eaf2f6;color:#607986;font-size:10px}
