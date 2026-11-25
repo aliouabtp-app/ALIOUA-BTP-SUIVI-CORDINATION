@@ -131,6 +131,9 @@ class DxfTo3DTests(SimpleTestCase):
         self.assertEqual(glb[:4], b"glTF")
         self.assertEqual(wall_count, 1)
         self.assertEqual(selected_layer, "A-WALL")
+        import io, trimesh
+        loaded = trimesh.load(io.BytesIO(glb), file_type="glb")
+        self.assertAlmostEqual(float(loaded.bounds[1][1] - loaded.bounds[0][1]), 3.0, places=2)
 
     def test_dxf_generator_rejects_unsupported_units(self):
         from .dxf_to_3d import generate_glb_from_dxf
