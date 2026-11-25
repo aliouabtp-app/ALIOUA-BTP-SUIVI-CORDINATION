@@ -76,7 +76,8 @@ layer_name=A-WALL
 الاستجابة تحتوي على `id`, `title`, `level`, `file` (رابط GLB)، `source_filename`, `source_layer`, `wall_count`, `units`, `wall_height`, `wall_thickness`, وبيانات الإنشاء.
 
 **حدود التحويل:** النسخة الأولى تستخرج LINE وLWPOLYLINE وPOLYLINE وتحوّل كل قطعة خطية إلى جدار مستطيل. لا تستنتج الفتحات أو الأعمدة أو البلاطات أو المناسيب من الواجهات والمقاطع. النتيجة تصور أولي وليست نموذج BIM أو رسماً تنفيذياً. الصلاحية للإنشاء Admin وManager وEngineer؛ القراءة لأي مستخدم مصادق.
-\n## أمثلة
+
+## أمثلة
 
 تسجيل الدخول:
 ```json
