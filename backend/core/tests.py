@@ -7,7 +7,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
-from .models import User,Project,Building,Level,Space,Issue,Task,AuditLog
+from .models import User,Project,Building,Level,Space,Issue,Task,Progress,AuditLog
 from .version import APP_VERSION, clean_commit, clean_build_date
 
 class ApiFoundationTests(TestCase):
@@ -171,3 +171,36 @@ class DxfModelApiTests(TestCase):
             listing = self.client.get("/api/models3d/")
             self.assertEqual(listing.status_code, 200)
             self.assertEqual(len(listing.data["results"]), 1)
+
+
+class WorkReportExportTests(TestCase):
+    def setUp(self):
+        self.client=APIClient()
+        self.user=User.objects.create_superuser(email="reports@test.local",password="StrongPass123!",full_name="Reports Admin")
+        project=Project.objects.create(name="Reports Project")
+        building=Building.objects.create(project=project,name="Building")
+        level=Level.objects.create(building=building,name="Ground")
+        self.space=Space.objects.create(level=level,name="Room A")
+        self.task=Task.objects.create(space=self.space,name="Install tiles",created_by=self.user,progress=40)
+        Progress.objects.create(space=self.space,percent=40,note="Tile work",updated_by=self.user)
+        self.client.force_authenticate(self.user)
+    def test_task_and_progress_excel_exports(self):
+        for kind in ("tasks","progress"):
+            response=self.client.get(f"/api/reports/{kind}.xlsx")
+            self.assertEqual(response.status_code,200)
+            self.assertIn("spreadsheetml",response["Content-Type"])
+            self.assertTrue(response.content.startswith(b"PK"))
+    def test_task_and_progress_pdf_exports(self):
+        for kind in ("tasks","progress"):
+            response=self.client.get(f"/api/reports/{kind}.pdf")
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response["Content-Type"],"application/pdf")
+            self.assertTrue(response.content.startswith(b"%PDF"))
+    def test_unknown_report_type_is_not_found(self):
+        self.assertEqual(self.client.get("/api/reports/unknown.xlsx").status_code,404)
+
+    def test_work_reports_require_authentication(self):
+        client = APIClient()
+        for kind in ("tasks", "progress"):
+            self.assertEqual(client.get(f"/api/reports/{kind}.xlsx").status_code, 401)
+            self.assertEqual(client.get(f"/api/reports/{kind}.pdf").status_code, 401)
