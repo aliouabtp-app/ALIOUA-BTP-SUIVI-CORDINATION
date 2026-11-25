@@ -493,7 +493,7 @@ class _TasksPageState extends State<TasksPage> {
     setState(()=>saving=true);
     try{
       final db=await openLocalDb();
-      final localId=await db.insert('tasks',{
+      await db.insert('tasks',{
         'name':name.text.trim(),'description':description.text.trim(),'space_id':spaceId,
         'progress':progress,'status':status,'sync_status':'pending_create',
         'created_at':DateTime.now().toIso8601String(),
