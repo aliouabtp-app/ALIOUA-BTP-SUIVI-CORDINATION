@@ -1,6 +1,6 @@
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
-from .models import User, Project, Building, Level, Space, Drawing, Issue, Task, Photo, Progress, AuditLog
+from .models import User, Project, Building, Level, Space, Drawing, Issue, Task, Photo, Progress, AuditLog, Model3D
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     class Meta:
