@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView,SpectacularSwaggerView
 from core.api_views import *
-from core.extra_views import DashboardView,IssueExcelExportView,IssuePdfExportView,SpaceQrView
+from core.extra_views import DashboardView,IssueExcelExportView,IssuePdfExportView,WorkExcelExportView,WorkPdfExportView,SpaceQrView
 from core.model3d_views import DxfModelGenerateView
 router=DefaultRouter()
 for prefix,view,name in [
@@ -19,7 +19,7 @@ urlpatterns=[
  path("admin/",admin.site.urls),path("api/health/",HealthView.as_view()),path("api/about/",AboutView.as_view()),
  path("api/auth/token/",TokenObtainPairView.as_view()),path("api/auth/token/refresh/",TokenRefreshView.as_view()),
  path("api/auth/me/",CurrentUserView.as_view()),path("api/dashboard/",DashboardView.as_view()),
- path("api/reports/issues.xlsx",IssueExcelExportView.as_view()),path("api/reports/issues.pdf",IssuePdfExportView.as_view()),
+ path("api/reports/issues.xlsx",IssueExcelExportView.as_view()),path("api/reports/issues.pdf",IssuePdfExportView.as_view()),\n path("api/reports/<str:report_type>.xlsx",WorkExcelExportView.as_view()),path("api/reports/<str:report_type>.pdf",WorkPdfExportView.as_view()),
  path("api/spaces/<uuid:space_id>/qr/",SpaceQrView.as_view()),
  path("api/models3d/generate/",DxfModelGenerateView.as_view()),
  path("api/",include(router.urls)),path("api/schema/",SpectacularAPIView.as_view(),name="schema"),
