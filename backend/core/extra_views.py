@@ -9,7 +9,7 @@ from openpyxl import Workbook
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import qrcode
-from .models import Project,Issue,Task,Level,Space
+from .models import Project,Issue,Task,Progress,Level,Space
 
 class DashboardView(APIView):
     permission_classes=[IsAuthenticated]
@@ -91,3 +91,79 @@ class SpaceQrView(APIView):
         payload=f"ALIOUA-BTP:SPACE:{space.id}:{space.qr_token}"
         img=qrcode.make(payload); out=BytesIO(); img.save(out,format="PNG"); out.seek(0)
         return HttpResponse(out.getvalue(),content_type="image/png")
+
+
+class WorkExcelExportView(APIView):
+    """تصدير المهام أو سجل تقدم المساحات إلى Excel."""
+    permission_classes=[IsAuthenticated]
+    def get(self,request,report_type):
+        wb=Workbook(); ws=wb.active
+        if report_type=="tasks":
+            ws.title="Tasks"
+            ws.append(["Task","Description","Space","Status","Progress %","Assignee","Due date"])
+            rows=Task.objects.select_related("space","assignee").order_by("due_date","name")
+            for x in rows:
+                ws.append([x.name,x.description,x.space.name,x.status,x.progress,x.assignee.full_name if x.assignee else "",str(x.due_date or "")])
+            filename="alioua-btp-tasks.xlsx"
+        elif report_type=="progress":
+            ws.title="Progress"
+            ws.append(["Space","Level","Building","Progress %","Note","Updated by","Updated at"])
+            rows=Progress.objects.select_related("space__level__building","updated_by").order_by("-updated_at")
+            for x in rows:
+                ws.append([x.space.name,x.space.level.name,x.space.level.building.name,x.percent,x.note,x.updated_by.full_name,x.updated_at.strftime("%Y-%m-%d %H:%M")])
+            filename="alioua-btp-progress.xlsx"
+        else:
+            return Response({"detail":"نوع التقرير غير مدعوم."},status=404)
+        for col in ws.columns:
+            letter=col[0].column_letter
+            ws.column_dimensions[letter].width=min(max(max(len(str(c.value or "")) for c in col)+2,12),45)
+        out=BytesIO(); wb.save(out); out.seek(0)
+        response=HttpResponse(out.getvalue(),content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"]=f'attachment; filename="{filename}"'
+        return response
+
+
+class WorkPdfExportView(APIView):
+    """تقرير PDF موجز للمهام أو تقدم المساحات."""
+    permission_classes=[IsAuthenticated]
+    def get(self,request,report_type):
+        from pathlib import Path
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from arabic_reshaper import reshape
+        from bidi.algorithm import get_display
+        out=BytesIO(); pdf=canvas.Canvas(out,pagesize=A4); width,height=A4
+        candidates=[Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),Path("/usr/share/fonts/dejavu/DejaVuSans.ttf")]
+        font=next((p for p in candidates if p.exists()),None)
+        if font:
+            if "DejaVuArabic" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("DejaVuArabic",str(font)))
+            arabic_font="DejaVuArabic"
+        else:
+            arabic_font="Helvetica"
+        def rtl(value): return get_display(reshape(str(value)))
+        if report_type=="tasks":
+            title="تقرير المهام"
+            rows=Task.objects.select_related("space","assignee").order_by("due_date","name")
+            filename="alioua-btp-tasks.pdf"
+            values=lambda x:[x.name,x.space.name,x.status,f"{x.progress}%",x.due_date or "—"]
+        elif report_type=="progress":
+            title="تقرير تقدم المساحات"
+            rows=Progress.objects.select_related("space__level__building","updated_by").order_by("-updated_at")
+            filename="alioua-btp-progress.pdf"
+            values=lambda x:[x.space.name,x.space.level.name,f"{x.percent}%",x.note or "—",x.updated_at.strftime("%Y-%m-%d")]
+        else:
+            return Response({"detail":"نوع التقرير غير مدعوم."},status=404)
+        pdf.setTitle(title); y=height-48
+        pdf.setFont(arabic_font,16); pdf.drawRightString(width-42,y,rtl("إتقان – ALIOUA BTP | "+title)); y-=32
+        for item in rows[:300]:
+            data=values(item)
+            pdf.setFont(arabic_font,9)
+            pdf.drawRightString(width-42,y,rtl(" | ".join(str(v) for v in data)[:130]))
+            y-=18
+            if y<45:
+                pdf.showPage(); y=height-45
+        pdf.save(); out.seek(0)
+        response=HttpResponse(out.getvalue(),content_type="application/pdf")
+        response["Content-Disposition"]=f'attachment; filename="{filename}"'
+        return response
