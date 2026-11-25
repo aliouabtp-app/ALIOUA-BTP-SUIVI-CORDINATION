@@ -9,7 +9,7 @@ from openpyxl import Workbook
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import qrcode
-from .models import Project,Issue,Task,Level,Space
+from .models import Project,Issue,Task,Progress,Level,Space
 
 class DashboardView(APIView):
     permission_classes=[IsAuthenticated]
@@ -91,3 +91,4 @@ class SpaceQrView(APIView):
         payload=f"ALIOUA-BTP:SPACE:{space.id}:{space.qr_token}"
         img=qrcode.make(payload); out=BytesIO(); img.save(out,format="PNG"); out.seek(0)
         return HttpResponse(out.getvalue(),content_type="image/png")
+
