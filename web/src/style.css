@@ -103,3 +103,25 @@ body{background:#eef3f7;background-image:radial-gradient(ellipse at 85% 0%,#dceb
 .progress-space-track{height:9px;background:#edf2f5;border-radius:20px;overflow:hidden}
 .progress-space-track i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#147db6,#159b83,#e3b33e);transition:width .35s ease}
 @media(max-width:600px){.progress-space-row{grid-template-columns:1fr 48px;gap:8px}.progress-space-track{grid-column:1/-1;grid-row:2}.progress-space-row strong{grid-column:2;grid-row:1}}
+
+/* مساحة تحويل DXF وعرض النماذج ثلاثية الأبعاد */
+.model3d-warning{font-size:11px;line-height:1.8;color:#8a6b2c;background:#fff7e5;border:1px solid #f0dfb8;border-radius:10px;padding:10px 12px;margin:12px 0 0}
+.model3d-layout{display:grid;grid-template-columns:minmax(210px,0.8fr) minmax(0,2fr);gap:14px;align-items:start}
+.model3d-list{max-height:540px;overflow:auto}
+.model3d-item{display:block;width:100%;text-align:right;border:0;border-bottom:1px solid #edf1f2;background:#fff;padding:13px 14px;cursor:pointer}
+.model3d-item b{display:block;color:#24485e;font-size:12px}
+.model3d-item small{display:block;color:#91a1a9;font-size:10px;margin-top:5px;word-break:break-word}
+.model3d-item.active{background:#eaf5fb;box-shadow:inset -3px 0 #147db6}
+.model3d-stage{min-width:0;background:#fff;border:1px solid #e1eaf0;border-radius:16px;padding:12px;box-shadow:0 7px 20px #16384c08}
+.model3d-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 5px 12px;flex-wrap:wrap}
+.model3d-meta b{font-size:13px;color:#1b4058}
+.model3d-meta small{font-size:10px;color:#8397a2}
+.model3d-meta a{font-size:11px;color:#147db6;text-decoration:none}
+.model3d-viewer{overflow:hidden;border:1px solid #dce7ed;border-radius:12px;background:#f1f6f8}
+.model3d-toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 12px;background:#e9f1f5;color:#31556a;font-size:10px}
+.model3d-toolbar small{color:#718895}
+.model3d-canvas{height:440px;min-height:320px;width:100%;position:relative}
+.model3d-canvas canvas{display:block;width:100%;height:100%}
+.model3d-canvas .workspace-message{position:absolute;top:10px;right:10px;left:10px;z-index:2}
+@media(max-width:850px){.model3d-layout{grid-template-columns:1fr}.model3d-list{max-height:220px}.model3d-canvas{height:360px}}
+@media(max-width:560px){.model3d-toolbar{align-items:flex-start;flex-direction:column}.model3d-canvas{height:300px}}
