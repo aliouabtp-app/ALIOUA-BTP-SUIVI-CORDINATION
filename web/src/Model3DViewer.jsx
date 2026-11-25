@@ -38,7 +38,7 @@ export default function Model3DViewer({url}){
    const max=Math.max(size.x,size.y,size.z,1);
    camera.position.set(max*1.5,max*1.2,max*1.5);
    camera.near=Math.max(max/1000,0.001);camera.far=max*100;camera.updateProjectionMatrix();
-   controls.target.set(0,size.y/2-center.y,0);controls.update();
+   controls.target.set(0,0,0);controls.update();
   },undefined,()=>setError("تعذر تحميل النموذج. تحقق من رابط الملف وصلاحية الوصول."));
   const animate=()=>{frame=requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);};
   animate();
