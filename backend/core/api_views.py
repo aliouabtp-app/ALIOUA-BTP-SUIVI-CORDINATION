@@ -118,6 +118,13 @@ class ProgressViewSet(AuditedViewSet):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset=models.AuditLog.objects.select_related("user"); serializer_class=AuditLogSerializer; permission_classes=[AdminOnlyPermission]
     filterset_fields=["action","entity","user"]; ordering_fields=["timestamp"]
+class Model3DViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset=models.Model3D.objects.select_related("level","generated_by")
+    serializer_class=Model3DSerializer
+    permission_classes=[IsAuthenticated]
+    search_fields=["title","source_filename","level__name"]
+    filterset_fields=["level"]
+
 class UserViewSet(AuditedViewSet):
     queryset=models.User.objects.all().order_by("full_name","email"); serializer_class=UserAdminSerializer; permission_classes=[AdminOnlyPermission]
     http_method_names=["get","post","put","patch","head","options"]; entity="User"

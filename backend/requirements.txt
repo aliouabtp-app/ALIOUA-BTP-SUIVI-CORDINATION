@@ -12,3 +12,5 @@ django-cors-headers>=4.7,<5
 gunicorn>=23,<24
 arabic-reshaper>=3,<4
 python-bidi>=0.6,<1
+ezdxf>=1.4,<2
+trimesh>=5.2,<6

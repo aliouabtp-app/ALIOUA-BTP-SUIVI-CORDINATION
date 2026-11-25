@@ -1,4 +1,8 @@
 import os
+import tempfile
+import ezdxf
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from unittest.mock import patch
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase
@@ -113,3 +117,57 @@ class AboutEndpointTests(TestCase):
 
     def test_openapi_version_matches_app_version(self):
         self.assertEqual(settings.SPECTACULAR_SETTINGS["VERSION"], APP_VERSION)
+
+
+class DxfTo3DTests(SimpleTestCase):
+    def test_dxf_wall_lines_generate_valid_glb(self):
+        from .dxf_to_3d import generate_glb_from_dxf
+        doc = ezdxf.new("R2010")
+        doc.layers.new("A-WALL")
+        doc.modelspace().add_line((0, 0), (5000, 0), dxfattribs={"layer": "A-WALL"})
+        with tempfile.NamedTemporaryFile(suffix=".dxf") as temp:
+            doc.saveas(temp.name)
+            glb, wall_count, selected_layer = generate_glb_from_dxf(
+                temp.name, units="MM", wall_height=3.0, wall_thickness=0.2
+            )
+        self.assertEqual(glb[:4], b"glTF")
+        self.assertEqual(wall_count, 1)
+        self.assertEqual(selected_layer, "A-WALL")
+        import io, trimesh
+        loaded = trimesh.load(io.BytesIO(glb), file_type="glb")
+        self.assertAlmostEqual(float(loaded.bounds[1][1] - loaded.bounds[0][1]), 3.0, places=2)
+
+    def test_dxf_generator_rejects_unsupported_units(self):
+        from .dxf_to_3d import generate_glb_from_dxf
+        with self.assertRaises(ValueError):
+            generate_glb_from_dxf("unused.dxf", units="UNKNOWN")
+
+
+class DxfModelApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_superuser(email="3d-admin@test.local", password="StrongPass123!", full_name="3D Admin")
+        project = Project.objects.create(name="3D Test Project")
+        building = Building.objects.create(project=project, name="Building")
+        self.level = Level.objects.create(building=building, name="Ground")
+
+    def test_admin_can_generate_and_list_glb_model(self):
+        doc = ezdxf.new("R2010")
+        doc.layers.new("A-WALL")
+        doc.modelspace().add_line((0, 0), (4000, 0), dxfattribs={"layer": "A-WALL"})
+        with tempfile.NamedTemporaryFile(suffix=".dxf") as temp:
+            doc.saveas(temp.name)
+            temp.seek(0)
+            uploaded = SimpleUploadedFile("ground.dxf", temp.read(), content_type="application/dxf")
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            self.client.force_authenticate(user=self.admin)
+            response = self.client.post("/api/models3d/generate/", {
+                "file": uploaded, "level": str(self.level.pk), "title": "Ground floor",
+                "units": "MM", "wall_height": "3", "wall_thickness": "0.2",
+            }, format="multipart")
+            self.assertEqual(response.status_code, 201, response.data)
+            self.assertEqual(response.data["wall_count"], 1)
+            self.assertTrue(response.data["file"].endswith(".glb"))
+            listing = self.client.get("/api/models3d/")
+            self.assertEqual(listing.status_code, 200)
+            self.assertEqual(len(listing.data["results"]), 1)

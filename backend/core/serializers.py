@@ -1,6 +1,6 @@
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
-from .models import User, Project, Building, Level, Space, Drawing, Issue, Task, Photo, Progress, AuditLog
+from .models import User, Project, Building, Level, Space, Drawing, Issue, Task, Photo, Progress, AuditLog, Model3D
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,3 +79,10 @@ class ProgressSerializer(serializers.ModelSerializer):
     class Meta: model=Progress; fields="__all__"; read_only_fields=["id","updated_by","updated_at"]
 class AuditLogSerializer(serializers.ModelSerializer):
     class Meta: model=AuditLog; fields="__all__"
+
+
+class Model3DSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Model3D
+        fields="__all__"
+        read_only_fields=["id","file","source_filename","wall_count","generated_by","created_at","updated_at","is_deleted","deleted_at","archived_at"]

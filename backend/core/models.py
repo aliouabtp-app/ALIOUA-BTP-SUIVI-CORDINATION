@@ -157,3 +157,19 @@ class AuditLog(UUIDModel):
     timestamp=models.DateTimeField(auto_now_add=True,db_index=True)
     payload=models.JSONField(default=dict,blank=True)
     class Meta: ordering=["-timestamp"]
+
+
+class Model3D(SoftDelete, UUIDModel):
+    """نموذج GLB مولّد محلياً من مخطط DXF؛ ليس نموذجاً تنفيذياً معتمداً."""
+    level=models.ForeignKey(Level,on_delete=models.PROTECT,related_name="models_3d")
+    title=models.CharField(max_length=200)
+    file=models.FileField(upload_to="models3d/%Y/%m/")
+    source_filename=models.CharField(max_length=255,blank=True)
+    source_layer=models.CharField(max_length=120,blank=True)
+    wall_count=models.PositiveIntegerField(default=0)
+    units=models.CharField(max_length=8,default="MM")
+    wall_height=models.DecimalField(max_digits=5,decimal_places=2,default=3.00)
+    wall_thickness=models.DecimalField(max_digits=4,decimal_places=2,default=0.20)
+    generated_by=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,related_name="generated_models_3d")
+    objects=ActiveManager(); all_objects=models.Manager()
+    class Meta: ordering=["-created_at"]
