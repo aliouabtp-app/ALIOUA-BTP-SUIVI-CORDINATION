@@ -45,14 +45,20 @@ class DxfModelGenerateView(APIView):
             raise ValidationError({"wall_height": "أدخل ارتفاعاً وسماكة صالحين."})
 
         try:
-            with tempfile.NamedTemporaryFile(suffix=".dxf") as temp:
+            temp_path = None
+            with tempfile.NamedTemporaryFile(suffix=".dxf", delete=False) as temp:
                 for chunk in uploaded.chunks():
                     temp.write(chunk)
                 temp.flush()
+                temp_path = temp.name
+            try:
                 glb, wall_count, selected_layer = generate_glb_from_dxf(
-                    temp.name, units=units, wall_height=height,
+                    temp_path, units=units, wall_height=height,
                     wall_thickness=thickness, layer_name=layer_name
                 )
+            finally:
+                if temp_path:
+                    Path(temp_path).unlink(missing_ok=True)
         except Exception as exc:
             raise ValidationError({"file": f"تعذر تحليل المخطط: {exc}"})
 
