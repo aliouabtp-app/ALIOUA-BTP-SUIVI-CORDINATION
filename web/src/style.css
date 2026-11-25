@@ -83,3 +83,13 @@ body{background:#eef3f7;background-image:radial-gradient(ellipse at 85% 0%,#dceb
 .qr-mini{border:1px solid #d6e6ef;background:#edf7fc;color:#126d9f;border-radius:6px;padding:3px 9px;font-size:10px}
 .qr-mini:hover{background:#dceff8}
 @media(max-width:760px){.hierarchy-forms{grid-template-columns:1fr}.hierarchy-forms .entry-form:first-child{grid-column:auto}}
+
+/* ألوان الأعمدة الهادئة المستوحاة من نموذج لوحة المهام المعتمد */
+.kanban-column.gold{background:#fbe4f1;border-color:#f3cfe2;border-top-color:#cf6ca7}
+.kanban-column.blue{background:#fcebdc;border-color:#f1ddc9;border-top-color:#e6a45c}
+.kanban-column.purple{background:#dff2f8;border-color:#c8e7f0;border-top-color:#55a9c5}
+.kanban-column.green{background:#eee8fb;border-color:#ddd2f3;border-top-color:#9274c7}
+.kanban-column.gold>header{color:#9b4d7a}.kanban-column.blue>header{color:#9c662f}
+.kanban-column.purple>header{color:#367d96}.kanban-column.green>header{color:#7255a5}
+.task-card{border-color:#ffffff;background:#fff;box-shadow:0 5px 14px #213c5010}
+.task-card h4{color:#173a51}
