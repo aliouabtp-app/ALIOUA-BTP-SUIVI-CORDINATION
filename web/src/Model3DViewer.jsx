@@ -14,7 +14,7 @@ export default function Model3DViewer({url}){
   scene.background=new THREE.Color(0xf1f6f8);
   const camera=new THREE.PerspectiveCamera(45,1,0.01,10000);
   camera.position.set(8,7,9);
-  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  let renderer;\n  try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});}\n  catch(_){setError("متصفحك لا يدعم WebGL أو تعذر إنشاء سياق العرض ثلاثي الأبعاد.");return;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   root.appendChild(renderer.domElement);
