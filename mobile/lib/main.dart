@@ -21,13 +21,32 @@ const navy = Color(0xFF102C43), teal = Color(0xFF1677B8), cream = Color(0xFFF4F7
 
 Future<Database> openLocalDb() async {
   final root = await getDatabasesPath();
-  return openDatabase(p.join(root, 'alioua_btp_local.db'), version: 1,
+  return openDatabase(p.join(root, 'alioua_btp_local.db'), version: 2,
     onCreate: (db, version) async {
       await db.execute('''CREATE TABLE issues(
         local_id INTEGER PRIMARY KEY AUTOINCREMENT, server_id TEXT, title TEXT NOT NULL,
         description TEXT, space_id TEXT NOT NULL, priority TEXT NOT NULL,
         due_date TEXT, image_path TEXT, sync_status TEXT NOT NULL DEFAULT 'pending',
         created_at TEXT NOT NULL)''');
+      await db.execute('''CREATE TABLE tasks(
+        local_id INTEGER PRIMARY KEY AUTOINCREMENT, server_id TEXT, name TEXT NOT NULL,
+        description TEXT, space_id TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'TODO', due_date TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending_create', created_at TEXT NOT NULL)''');
+      await db.execute('''CREATE TABLE spaces(
+        id TEXT PRIMARY KEY, name TEXT NOT NULL)''');
+    },
+    onUpgrade: (db, oldVersion, newVersion) async {
+      // ترقية قاعدة البيانات الحالية دون حذف ملاحظات المستخدم المحفوظة.
+      if (oldVersion < 2) {
+        await db.execute('''CREATE TABLE tasks(
+          local_id INTEGER PRIMARY KEY AUTOINCREMENT, server_id TEXT, name TEXT NOT NULL,
+          description TEXT, space_id TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'TODO', due_date TEXT,
+          sync_status TEXT NOT NULL DEFAULT 'pending_create', created_at TEXT NOT NULL)''');
+        await db.execute('''CREATE TABLE spaces(
+          id TEXT PRIMARY KEY, name TEXT NOT NULL)''');
+      }
     });
 }
 
@@ -78,7 +97,7 @@ class _AliouaAppState extends State<AliouaApp> {
   }
   @override Widget build(BuildContext context) => MaterialApp(
     builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox.shrink()),
-    debugShowCheckedModeBanner: false, title: 'ALIOUA BTP',
+    debugShowCheckedModeBanner: false, title: 'إتقان – ALIOUA BTP',
     theme: ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: cream,
@@ -151,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
     padding: const EdgeInsets.all(24), child: Card(elevation: 2, child: Padding(padding: const EdgeInsets.all(24),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.apartment_rounded, size: 48, color: teal),
-        const SizedBox(height: 12), const Text('ALIOUA BTP', style: TextStyle(fontSize: 23,fontWeight: FontWeight.bold,color: navy)),
+        const SizedBox(height: 12), const Text('إتقان – ALIOUA BTP', style: TextStyle(fontSize: 23,fontWeight: FontWeight.bold,color: navy)),
         const Text('متابعة وتنسيق الورش', style: TextStyle(color: Colors.blueGrey)),
         const SizedBox(height: 24),
         TextField(controller: server, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText:'عنوان الخادم API',hintText:'http://192.168.1.10:8000/api',border:OutlineInputBorder())),
@@ -326,44 +345,126 @@ class TasksPage extends StatefulWidget {
 class _TasksPageState extends State<TasksPage> {
   List<Map<String,dynamic>> tasks=[];
   List<Map<String,dynamic>> spaces=[];
-  bool loading=true, saving=false;
+  bool loading=true, saving=false, syncing=false, offline=false;
   String error='';
-  @override void initState(){super.initState();_load();}
+  StreamSubscription<List<ConnectivityResult>>? connectionSub;
+
+  @override void initState(){
+    super.initState();
+    _load();
+    connectionSub=Connectivity().onConnectivityChanged.listen((states){
+      if(states.any((s)=>s!=ConnectivityResult.none) && mounted) _sync();
+    });
+  }
+  @override void dispose(){connectionSub?.cancel();super.dispose();}
+
+  List<Map<String,dynamic>> _taskMaps(List<Map<String,Object?>> rows)=>rows.map((r)=>{
+    'local_id':r['local_id'],'id':r['server_id']??'local_${r['local_id']}',
+    'server_id':r['server_id'],'name':r['name'],'description':r['description']??'',
+    'space':r['space_id'],'progress':r['progress']??0,'status':r['status']??'TODO',
+    'due_date':r['due_date'],'sync_status':r['sync_status']??'synced',
+  }).toList();
+
   Future<void> _load() async {
-    setState(()=>loading=true);
-    try {
+    if(mounted)setState(()=>loading=true);
+    final db=await openLocalDb();
+    final cachedSpaces=await db.query('spaces',orderBy:'name');
+    final cachedTasks=await db.query('tasks',orderBy:'local_id DESC');
+    if(mounted)setState((){
+      spaces=cachedSpaces.map((x)=>Map<String,dynamic>.from(x)).toList();
+      tasks=_taskMaps(cachedTasks);
+      loading=false;
+    });
+    try{
       final headers={'Authorization':'Bearer ${widget.token}'};
       final responses=await Future.wait([
         http.get(Uri.parse('$apiBase/tasks/'),headers:headers),
         http.get(Uri.parse('$apiBase/spaces/'),headers:headers),
-      ]).timeout(const Duration(seconds:15));
-      if(responses.any((r)=>r.statusCode!=200)) throw Exception('تعذر تحميل المهام والمساحات');
-      final a=jsonDecode(responses[0].body), b=jsonDecode(responses[1].body);
-      final taskList=a is List?a:(a['results'] as List? ?? []);
-      final spaceList=b is List?b:(b['results'] as List? ?? []);
-      if(!mounted)return;
-      setState((){
-        tasks=taskList.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList();
-        spaces=spaceList.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList();
-        error='';
+      ]).timeout(const Duration(seconds:12));
+      if(responses.any((r)=>r.statusCode!=200))throw Exception('API');
+      final taskBody=jsonDecode(responses[0].body),spaceBody=jsonDecode(responses[1].body);
+      final remoteTasks=taskBody is List?taskBody:(taskBody['results'] as List? ?? []);
+      final remoteSpaces=spaceBody is List?spaceBody:(spaceBody['results'] as List? ?? []);
+      for(final raw in remoteSpaces){
+        if(raw is Map && raw['id']!=null){
+          await db.insert('spaces',{'id':raw['id'].toString(),'name':raw['name']?.toString()??'مساحة'},conflictAlgorithm:ConflictAlgorithm.replace);
+        }
+      }
+      for(final raw in remoteTasks){
+        if(raw is! Map || raw['id']==null || raw['space']==null)continue;
+        final id=raw['id'].toString();
+        final existing=await db.query('tasks',where:'server_id=?',whereArgs:[id],limit:1);
+        if(existing.isNotEmpty && existing.first['sync_status']!='synced')continue;
+        final values={
+          'server_id':id,'name':raw['name']?.toString()??'مهمة',
+          'description':raw['description']?.toString()??'','space_id':raw['space'].toString(),
+          'progress':(raw['progress'] as num?)?.toInt()??0,
+          'status':raw['status']?.toString()??'TODO','due_date':raw['due_date']?.toString(),
+          'sync_status':'synced','created_at':raw['created_at']?.toString()??DateTime.now().toIso8601String(),
+        };
+        if(existing.isEmpty){await db.insert('tasks',values);}
+        else{await db.update('tasks',values,where:'local_id=?',whereArgs:[existing.first['local_id']]);}
+      }
+      final refreshedSpaces=await db.query('spaces',orderBy:'name');
+      final refreshedTasks=await db.query('tasks',orderBy:'local_id DESC');
+      if(mounted)setState((){
+        spaces=refreshedSpaces.map((x)=>Map<String,dynamic>.from(x)).toList();
+        tasks=_taskMaps(refreshedTasks);offline=false;error='';
       });
-    } catch(e){if(mounted)setState(()=>error='تعذر الاتصال بالخادم. تحقق من الشبكة.');}
-    finally{if(mounted)setState(()=>loading=false);}
+    }catch(_){
+      if(mounted)setState(()=>offline=true);
+    }
   }
-  Future<void> _update(Map<String,dynamic> task, Map<String,dynamic> changes) async {
-    try {
-      final r=await http.patch(Uri.parse('$apiBase/tasks/${task['id']}/'),
-        headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},
-        body:jsonEncode(changes));
-      if(r.statusCode<200||r.statusCode>=300)throw Exception();
+
+  Future<void> _sync() async {
+    if(syncing||!mounted)return;
+    setState(()=>syncing=true);
+    try{
+      final db=await openLocalDb();
+      final pending=await db.query('tasks',where:"sync_status IN ('pending_create','pending_update')",orderBy:'local_id');
+      for(final item in pending){
+        try{
+          final serverId=item['server_id']?.toString()??'';
+          final body=jsonEncode({
+            'name':item['name'],'description':item['description']??'',
+            'space':item['space_id'],'progress':item['progress']??0,
+            'status':item['status']??'TODO','due_date':item['due_date'],
+          });
+          final headers={'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'};
+          if(serverId.isEmpty){
+            final r=await http.post(Uri.parse('$apiBase/tasks/'),headers:headers,body:body).timeout(const Duration(seconds:12));
+            if(r.statusCode!=201)continue;
+            final id=jsonDecode(r.body)['id']?.toString();
+            if(id!=null)await db.update('tasks',{'server_id':id,'sync_status':'synced'},where:'local_id=?',whereArgs:[item['local_id']]);
+          }else{
+            final r=await http.patch(Uri.parse('$apiBase/tasks/$serverId/'),headers:headers,body:body).timeout(const Duration(seconds:12));
+            if(r.statusCode>=200&&r.statusCode<300)await db.update('tasks',{'sync_status':'synced'},where:'local_id=?',whereArgs:[item['local_id']]);
+          }
+        }catch(_){break;}
+      }
       await _load();
-    } catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر تحديث المهمة.')));}
+    }finally{if(mounted)setState(()=>syncing=false);}
   }
+
+  Future<void> _update(Map<String,dynamic> task,Map<String,dynamic> changes) async {
+    final db=await openLocalDb();
+    final localId=task['local_id'] as int?;
+    if(localId==null)return;
+    final values=<String,Object?>{};
+    if(changes.containsKey('progress'))values['progress']=changes['progress'];
+    if(changes.containsKey('status'))values['status']=changes['status'];
+    final current=await db.query('tasks',where:'local_id=?',whereArgs:[localId],limit:1);
+    if(current.isEmpty)return;
+    values['sync_status']=current.first['server_id']==null?'pending_create':'pending_update';
+    await db.update('tasks',values,where:'local_id=?',whereArgs:[localId]);
+    final rows=await db.query('tasks',orderBy:'local_id DESC');
+    if(mounted)setState(()=>tasks=_taskMaps(rows));
+    if(!offline)await _sync();
+  }
+
   Future<void> _newTask() async {
-    final name=TextEditingController(), description=TextEditingController();
-    String? spaceId;
-    int progress=0;
-    String status='TODO';
+    final name=TextEditingController(),description=TextEditingController();
+    String? spaceId;int progress=0;String status='TODO';
     final created=await showDialog<bool>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(context,setDialog)=>AlertDialog(
       title:const Text('إضافة مهمة ميدانية'),
       content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -382,51 +483,65 @@ class _TasksPageState extends State<TasksPage> {
           DropdownMenuItem(value:'DONE',child:Text('مكتملة')),
         ],onChanged:(v)=>setDialog(()=>status=v??'TODO')),
       ])),
-      actions:[
-        TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const Text('إلغاء')),
-        FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const Text('حفظ')),
-      ],
+      actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(dialogContext,true),child:const Text('حفظ'))],
     )));
     if(created!=true)return;
-    if(name.text.trim().isEmpty||spaceId==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أدخل اسم المهمة واختر المساحة.')));return;}
+    if(name.text.trim().isEmpty||spaceId==null){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أدخل اسم المهمة واختر المساحة.')));
+      return;
+    }
     setState(()=>saving=true);
     try{
-      final r=await http.post(Uri.parse('$apiBase/tasks/'),
-        headers:{'Authorization':'Bearer ${widget.token}','Content-Type':'application/json'},
-        body:jsonEncode({'name':name.text.trim(),'description':description.text.trim(),'space':spaceId,'progress':progress,'status':status}));
-      if(r.statusCode!=201)throw Exception();
-      await _load();
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تمت إضافة المهمة.')));
-    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر حفظ المهمة. تحقق من صلاحية الحساب.')));}
-    finally{if(mounted)setState(()=>saving=false);}
+      final db=await openLocalDb();
+      await db.insert('tasks',{
+        'name':name.text.trim(),'description':description.text.trim(),'space_id':spaceId,
+        'progress':progress,'status':status,'sync_status':'pending_create',
+        'created_at':DateTime.now().toIso8601String(),
+      });
+      final rows=await db.query('tasks',orderBy:'local_id DESC');
+      if(mounted)setState(()=>tasks=_taskMaps(rows));
+      if(!offline)await _sync();
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(offline?'حُفظت المهمة على الهاتف وستتم مزامنتها عند عودة الشبكة.':'تم حفظ المهمة.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تعذر حفظ المهمة محلياً.')));
+    }finally{if(mounted)setState(()=>saving=false);}
   }
+
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('مهام الموقع'),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh))]),
-    floatingActionButton:FloatingActionButton.extended(onPressed:saving?null:_newTask,icon:const Icon(Icons.add),label:const Text('مهمة جديدة')),
-    body:RefreshIndicator(onRefresh:_load,child:loading?const Center(child:CircularProgressIndicator()):error.isNotEmpty?ListView(children:[Padding(padding:const EdgeInsets.all(24),child:Text(error,textAlign:TextAlign.center))]):tasks.isEmpty?ListView(children:const [SizedBox(height:150),Center(child:Text('لا توجد مهام مسجلة بعد'))]):ListView.builder(
-      padding:const EdgeInsets.all(14),itemCount:tasks.length,itemBuilder:(context,index){
-        final task=tasks[index], progress=(task['progress'] as num?)?.toInt()??0, status=task['status']?.toString()??'TODO';
-        return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Row(children:[Expanded(child:Text(task['name']?.toString()??'مهمة',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))),Text('$progress%',style:const TextStyle(color:teal,fontWeight:FontWeight.bold))]),
-          if((task['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:5),child:Text(task['description'].toString(),style:const TextStyle(color:Colors.blueGrey,fontSize:12))),
-          const SizedBox(height:10),
-          ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:progress/100,minHeight:8,backgroundColor:const Color(0xFFE7EEF1),color:teal)),
-          const SizedBox(height:10),
-          Row(children:[
-            Expanded(child:DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(isDense:true,labelText:'الحالة'),items:const [
-              DropdownMenuItem(value:'TODO',child:Text('جديدة')),
-              DropdownMenuItem(value:'IN_PROGRESS',child:Text('قيد التنفيذ')),
-              DropdownMenuItem(value:'BLOCKED',child:Text('متوقفة')),
-              DropdownMenuItem(value:'DONE',child:Text('مكتملة')),
-            ],onChanged:(v){if(v!=null)_update(task,{'status':v});})),
-            const SizedBox(width:12),
-            IconButton(tooltip:'تعديل نسبة الإنجاز',onPressed:()=>showDialog<void>(context:context,builder:(ctx){
-              double value=progress.toDouble();
-              return StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(title:const Text('تحديث الإنجاز'),content:Column(mainAxisSize:MainAxisSize.min,children:[Text('${value.round()}%'),Slider(value:value,min:0,max:100,divisions:20,onChanged:(v)=>setDialog(()=>value=v))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){Navigator.pop(ctx);_update(task,{'progress':value.round()});},child:const Text('تحديث'))]));
-            }),icon:const Icon(Icons.tune,color:teal)),
-          ]),
-        ])));
-      })),
+    appBar:AppBar(title:const Text('مهام الموقع'),actions:[
+      IconButton(onPressed:loading?null:_load,icon:const Icon(Icons.refresh)),
+      IconButton(onPressed:syncing?null:_sync,icon:syncing?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):const Icon(Icons.sync)),
+    ]),
+    floatingActionButton:FloatingActionButton.extended(onPressed:saving||spaces.isEmpty?null:_newTask,icon:const Icon(Icons.add),label:const Text('مهمة جديدة')),
+    body:RefreshIndicator(onRefresh:_load,child:loading?const Center(child:CircularProgressIndicator()):Column(children:[
+      if(offline)Container(width:double.infinity,color:const Color(0xFFFFF1D8),padding:const EdgeInsets.all(10),child:const Text('وضع عدم الاتصال: المهام الجديدة والتعديلات محفوظة محلياً.',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF805D1B),fontSize:12))),
+      Expanded(child:tasks.isEmpty?ListView(children:[const SizedBox(height:140),Center(child:Text(spaces.isEmpty?'اتصل بالخادم مرة واحدة لتحميل المساحات قبل العمل دون اتصال.':'لا توجد مهام مسجلة بعد.'))]):ListView.builder(
+        padding:const EdgeInsets.all(14),itemCount:tasks.length,itemBuilder:(context,index){
+          final task=tasks[index],progress=(task['progress'] as num?)?.toInt()??0,status=task['status']?.toString()??'TODO';
+          final localPending=task['sync_status']!='synced';
+          return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[Expanded(child:Text(task['name']?.toString()??'مهمة',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))),Text('$progress%',style:const TextStyle(color:teal,fontWeight:FontWeight.bold))]),
+            if((task['description']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:5),child:Text(task['description'].toString(),style:const TextStyle(color:Colors.blueGrey,fontSize:12))),
+            const SizedBox(height:10),
+            ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:progress/100,minHeight:8,backgroundColor:const Color(0xFFE7EEF1),color:teal)),
+            const SizedBox(height:10),
+            Row(children:[
+              Expanded(child:DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(isDense:true,labelText:'الحالة'),items:const [
+                DropdownMenuItem(value:'TODO',child:Text('جديدة')),
+                DropdownMenuItem(value:'IN_PROGRESS',child:Text('قيد التنفيذ')),
+                DropdownMenuItem(value:'BLOCKED',child:Text('متوقفة')),
+                DropdownMenuItem(value:'DONE',child:Text('مكتملة')),
+              ],onChanged:(v){if(v!=null)_update(task,{'status':v});})),
+              const SizedBox(width:12),
+              IconButton(tooltip:'تعديل نسبة الإنجاز',onPressed:()=>showDialog<void>(context:context,builder:(ctx){
+                double value=progress.toDouble();
+                return StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(title:const Text('تحديث الإنجاز'),content:Column(mainAxisSize:MainAxisSize.min,children:[Text('${value.round()}%'),Slider(value:value,min:0,max:100,divisions:20,onChanged:(v)=>setDialog(()=>value=v))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){Navigator.pop(ctx);_update(task,{'progress':value.round()});},child:const Text('تحديث'))]));
+              }),icon:Icon(Icons.tune,color:teal)),
+            ]),
+            if(localPending)const Padding(padding:EdgeInsets.only(top:8),child:Text('محفوظ محلياً — ينتظر المزامنة',style:TextStyle(color:Colors.orange,fontSize:11))),
+          ])));
+        })),
+    ])),
   );
 }
 
@@ -497,7 +612,7 @@ class _AboutPageState extends State<AboutPage> {
     setState(() { appVersion = '${info.version} (${info.buildNumber})'; online = reached; loading = false; });
   }
   String _summary() => [
-    'ALIOUA BTP',
+    'إتقان – ALIOUA BTP',
     'التطبيق: $appVersion',
     'commit التطبيق: ${_shortCommit(appCommit)}',
     'API: $apiBase',
