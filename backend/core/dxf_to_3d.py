@@ -79,4 +79,7 @@ def generate_glb_from_dxf(path, units="MM", wall_height=3.0, wall_thickness=0.2,
 
     if not meshes:
         raise ValueError("لم نعثر على خطوط صالحة لبناء الجدران في المخطط.")
-    return bytes(trimesh.util.concatenate(meshes).export(file_type="glb")), wall_count, selected_layer
+    combined = trimesh.util.concatenate(meshes)
+    # تحويل Z-up في DXF إلى Y-up القياسي في GLTF حتى يظهر النموذج واقفاً في Three.js.
+    combined.apply_transform(trimesh.transformations.rotation_matrix(-math.pi / 2, [1, 0, 0]))
+    return bytes(combined.export(file_type="glb")), wall_count, selected_layer
