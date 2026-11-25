@@ -57,7 +57,7 @@ class DxfModelGenerateView(APIView):
             raise ValidationError({"file": f"تعذر تحليل المخطط: {exc}"})
 
         safe_name = slugify(title) or "floor-model"
-        model = Model3D(
+        selected_layer = selected_layer[:120]\n        model = Model3D(
             level=level, title=title, source_filename=uploaded.name,
             source_layer=selected_layer, wall_count=wall_count, units=units,
             wall_height=height, wall_thickness=thickness, generated_by=request.user
